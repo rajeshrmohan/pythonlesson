@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PY//LEARN — Basic Python: print() &amp; Comments (Topics 3–4)</title>
+
+<!-- ============================================================
+     CDN libraries — no backend required
+     - CodeMirror 5 : Python editor for the practice challenges
+     - Pyodide      : CPython in WebAssembly, runs code client-side
+     ============================================================ -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   DESIGN TOKENS — matches the PY//LAB FUI theme
+   ================================================================ */
+:root{
+  --bg:         #0b0f19;
+  --bg-panel:   rgba(13, 20, 36, .82);
+  --grid-line:  rgba(60, 130, 210, .07);
+  --cyan:       #22d3ee;
+  --cyan-dim:   rgba(34, 211, 238, .35);
+  --cyan-faint: rgba(34, 211, 238, .12);
+  --text:       #dbe7f4;
+  --text-dim:   #7e93ad;
+  --red:        #fb4d5c;
+  --red-dim:    rgba(251, 77, 92, .35);
+  --green:      #34d399;
+  --green-dim:  rgba(52, 211, 153, .35);
+  --amber:      #fbbf24;
+  --font-ui:    'Chakra Petch', sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+  --radius:     6px;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; overflow:hidden; }
+body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -5%, rgba(34,211,238,.06), transparent 70%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:100% 100%, 42px 42px, 42px 42px;
+  color:var(--text);
+  font-family:var(--font-ui);
+}
+
+/* ---------------- shell: header + scrollable stage --------------- */
+.app{ display:flex; flex-direction:column; height:100vh; width:100vw; padding:12px; gap:12px; }
+header{
+  flex:0 0 auto; display:flex; align-items:center; gap:12px; padding:8px 16px;
+  background:var(--bg-panel); border:1px solid var(--cyan-dim); border-radius:var(--radius);
+  box-shadow:0 0 18px -6px var(--cyan-dim), inset 0 0 24px -18px var(--cyan);
+  flex-wrap:wrap;
+}
+.brand{ font-weight:700; font-size:1rem; letter-spacing:.2em; color:var(--cyan); text-shadow:0 0 12px var(--cyan-dim); white-space:nowrap; }
+.brand small{ color:var(--text-dim); letter-spacing:.12em; font-weight:500; }
+.credit{ font-size:.58rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim);
+  border-left:1px solid rgba(34,211,238,.25); padding-left:12px; user-select:none; white-space:nowrap; }
+@media (max-width:1100px){ .credit{ display:none; } }
+.status{ display:flex; align-items:center; gap:8px; font-size:.7rem; letter-spacing:.14em;
+  color:var(--text-dim); text-transform:uppercase; white-space:nowrap; }
+.status .dot{ width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 8px var(--amber); animation:pulse 1.2s infinite; }
+.status.ready .dot{ background:var(--green); box-shadow:0 0 8px var(--green); animation:none; }
+.status.running .dot{ background:var(--cyan); box-shadow:0 0 10px var(--cyan); animation:pulse .7s infinite; }
+@keyframes pulse{ 50%{ opacity:.35; } }
+.spacer{ flex:1; }
+
+/* mode tabs */
+.mode-tabs{ display:flex; gap:6px; }
+.mode-tab{
+  font-family:var(--font-ui); font-size:.78rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--text-dim); cursor:pointer; background:rgba(34,211,238,.05);
+  border:1px solid rgba(34,211,238,.2); border-radius:var(--radius); padding:8px 18px;
+  transition:all .15s;
+}
+.mode-tab:hover{ color:var(--text); background:var(--cyan-faint); }
+.mode-tab.active{
+  color:#04141a; font-weight:700; background:linear-gradient(180deg,#67e8f9,var(--cyan));
+  border-color:var(--cyan); box-shadow:0 0 16px -2px var(--cyan-dim);
+}
+
+/* stage */
+.stage{ flex:1; min-height:0; display:none; gap:12px; }
+.stage.active{ display:flex; }
+
+/* generic panel */
+.panel{
+  position:relative; background:var(--bg-panel); border:1px solid var(--cyan-dim);
+  border-radius:var(--radius); box-shadow:0 0 18px -8px var(--cyan-dim);
+  display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden;
+}
+.panel::before, .panel::after{ content:""; position:absolute; width:14px; height:14px; pointer-events:none; z-index:3; }
+.panel::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
+.panel::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
+.panel-head{
+  display:flex; align-items:center; gap:10px; padding:8px 14px; flex:0 0 auto;
+  font-size:.7rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--cyan);
+  border-bottom:1px solid rgba(34,211,238,.18);
+  background:linear-gradient(90deg, var(--cyan-faint), transparent 60%);
+}
+.panel-body{ flex:1; min-height:0; overflow-y:auto; padding:16px; }
+
+button{
+  font-family:var(--font-ui); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+  cursor:pointer; color:var(--text); background:rgba(34,211,238,.06);
+  border:1px solid var(--cyan-dim); border-radius:var(--radius); padding:7px 14px;
+  transition:box-shadow .15s, background .15s, transform .05s; white-space:nowrap;
+}
+button:hover{ background:var(--cyan-faint); box-shadow:0 0 12px -2px var(--cyan-dim); }
+button:active{ transform:translateY(1px); }
+button:disabled{ opacity:.4; cursor:not-allowed; box-shadow:none; }
+button.primary{
+  color:#04141a; font-weight:700; background:linear-gradient(180deg,#67e8f9,var(--cyan));
+  border-color:var(--cyan); box-shadow:0 0 14px -2px var(--cyan-dim);
+}
+button.success{ color:#04140c; font-weight:700; background:linear-gradient(180deg,#6ee7b7,var(--green)); border-color:var(--green); }
+
+/* ---------------- LEARN mode ---------------- */
+#stage-learn{ }
+.lesson-nav{ flex:0 0 250px; }
+.lesson-nav .panel-body{ padding:10px; }
+.nav-topic{ font-size:.66rem; letter-spacing:.18em; color:var(--text-dim); text-transform:uppercase; margin:12px 6px 6px; }
+.nav-item{
+  padding:8px 10px; margin-bottom:4px; border-radius:5px; cursor:pointer;
+  font-size:.8rem; color:var(--text-dim); border:1px solid transparent; transition:all .15s;
+}
+.nav-item:hover{ color:var(--text); background:var(--cyan-faint); }
+.nav-item.active{ color:var(--cyan); background:var(--cyan-faint); border-color:var(--cyan-dim); text-shadow:0 0 8px var(--cyan-dim); }
+.lesson-main{ flex:1; }
+.lesson-main .panel-body{ padding:20px 26px; }
+
+.lesson h2{ font-size:1.15rem; letter-spacing:.06em; color:var(--cyan); margin-bottom:4px; }
+.lesson .objective{ font-size:.72rem; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; margin-bottom:16px; }
+.lesson p{ font-size:.9rem; line-height:1.7; margin-bottom:12px; max-width:820px; }
+.lesson ul{ margin:0 0 12px 22px; font-size:.9rem; line-height:1.7; max-width:800px; }
+.lesson code{ font-family:var(--font-mono); font-size:.82em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.callout{
+  border-left:3px solid var(--amber); background:rgba(251,191,36,.06);
+  padding:10px 14px; margin:0 0 14px; font-size:.84rem; line-height:1.6; max-width:800px; border-radius:0 5px 5px 0;
+}
+.callout.red{ border-left-color:var(--red); background:var(--red-faint, rgba(251,77,92,.07)); }
+
+/* runnable example card */
+.example{
+  border:1px solid rgba(34,211,238,.25); border-radius:var(--radius);
+  background:rgba(5,9,18,.55); margin:0 0 18px; max-width:820px; overflow:hidden;
+}
+.example .ex-head{
+  display:flex; align-items:center; gap:10px; padding:6px 12px;
+  border-bottom:1px solid rgba(34,211,238,.15);
+  font-size:.64rem; letter-spacing:.16em; text-transform:uppercase; color:var(--text-dim);
+}
+.example .ex-head .predict{ color:var(--amber); border:1px solid rgba(251,191,36,.4); border-radius:3px; padding:1px 6px; }
+.example .ex-head button{ margin-left:auto; padding:4px 10px; font-size:.64rem; }
+.example pre{
+  font-family:var(--font-mono); font-size:.82rem; line-height:1.65;
+  padding:12px 14px; overflow-x:auto; color:var(--text); white-space:pre;
+}
+.example .ex-out{
+  display:none; border-top:1px dashed rgba(34,211,238,.25);
+  font-family:var(--font-mono); font-size:.8rem; line-height:1.6;
+  padding:10px 14px; white-space:pre-wrap; word-break:break-word;
+}
+.example .ex-out .lbl{ color:var(--cyan); font-size:.62rem; letter-spacing:.16em; display:block; margin-bottom:4px; }
+.example .ex-out .err{ color:#ffb3ba; }
+
+/* ---------------- PRACTICE mode ---------------- */
+.task-nav{ flex:0 0 250px; }
+.task-nav .panel-body{ padding:10px; }
+.task-item{ display:flex; align-items:center; gap:8px; }
+.task-item .tick{ color:var(--green); font-size:.8rem; visibility:hidden; }
+.task-item.done .tick{ visibility:visible; text-shadow:0 0 8px var(--green-dim); }
+.practice-main{ flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; }
+.practice-top{ flex:0 0 auto; max-height:34%; }
+.practice-top .panel-body{ padding:14px 18px; }
+.practice-top h3{ font-size:.95rem; color:var(--cyan); margin-bottom:6px; letter-spacing:.05em; }
+.practice-top p{ font-size:.85rem; line-height:1.6; margin-bottom:8px; }
+.practice-top code{ font-family:var(--font-mono); font-size:.8em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.expected{
+  font-family:var(--font-mono); font-size:.8rem; line-height:1.55; white-space:pre;
+  border:1px dashed var(--cyan-dim); border-radius:5px; padding:8px 12px;
+  background:rgba(5,9,18,.5); overflow-x:auto; max-width:640px;
+}
+.practice-editor{ flex:1.4; min-height:140px; }
+.practice-editor .panel-body{ padding:0; overflow:hidden; display:flex; }
+.practice-editor .panel-head .btns{ margin-left:auto; display:flex; gap:6px; }
+.CodeMirror{
+  height:100%; flex:1; background:rgba(5,9,18,.6); color:var(--text);
+  font-family:var(--font-mono); font-size:.85rem; line-height:1.6;
+}
+.CodeMirror-gutters{ background:rgba(5,9,18,.85); border-right:1px solid rgba(34,211,238,.18); }
+.CodeMirror-linenumber{ color:#3c4f66; }
+.CodeMirror-cursor{ border-left:2px solid var(--cyan); }
+.CodeMirror-selected{ background:rgba(34,211,238,.15) !important; }
+.cm-s-default .cm-keyword{ color:#7dd3fc; } .cm-s-default .cm-builtin{ color:#67e8f9; }
+.cm-s-default .cm-string{ color:#86efac; } .cm-s-default .cm-number{ color:#fbbf24; }
+.cm-s-default .cm-comment{ color:#5b7089; font-style:italic; } .cm-s-default .cm-operator{ color:#c4b5fd; }
+
+.practice-result{ flex:1; min-height:110px; }
+.practice-result .panel-body{ font-family:var(--font-mono); font-size:.8rem; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.practice-result .placeholder{ color:var(--text-dim); font-style:italic; }
+.verdict{ font-family:var(--font-ui); font-weight:700; letter-spacing:.1em; padding:6px 10px; border-radius:5px; display:inline-block; margin-bottom:10px; }
+.verdict.pass{ color:var(--green); border:1px solid var(--green-dim); background:rgba(52,211,153,.08); text-shadow:0 0 10px var(--green-dim); }
+.verdict.fail{ color:var(--red); border:1px solid var(--red-dim); background:rgba(251,77,92,.07); }
+.diff-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:760px; margin-top:6px; }
+.diff-box{ border:1px solid rgba(34,211,238,.2); border-radius:5px; padding:8px 10px; background:rgba(5,9,18,.5); white-space:pre; overflow-x:auto; }
+.diff-box.bad{ border-color:var(--red-dim); }
+.diff-box .lbl{ font-size:.6rem; letter-spacing:.14em; color:var(--text-dim); display:block; margin-bottom:4px; }
+.err-text{ color:#ffb3ba; }
+.hint-text{ color:var(--amber); }
+
+/* ---------------- QUIZ mode ---------------- */
+#stage-quiz .panel{ flex:1; }
+#stage-quiz .panel-body{ padding:20px 26px; }
+.quiz-q{ border:1px solid rgba(34,211,238,.2); border-radius:var(--radius); background:rgba(5,9,18,.45); padding:14px 18px; margin-bottom:14px; max-width:860px; }
+.quiz-q .q-text{ font-size:.9rem; line-height:1.6; margin-bottom:10px; }
+.quiz-q .q-text code, .quiz-q label code{ font-family:var(--font-mono); font-size:.82em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.quiz-q .q-num{ color:var(--cyan); font-weight:700; margin-right:6px; }
+.quiz-q label{
+  display:block; font-size:.85rem; padding:7px 12px; margin-bottom:6px; cursor:pointer;
+  border:1px solid rgba(34,211,238,.15); border-radius:5px; transition:all .12s; line-height:1.5;
+}
+.quiz-q label:hover{ background:var(--cyan-faint); }
+.quiz-q input{ accent-color:var(--cyan); margin-right:9px; }
+.quiz-q.graded label{ cursor:default; }
+.quiz-q label.correct{ border-color:var(--green); background:rgba(52,211,153,.1); box-shadow:0 0 10px -4px var(--green-dim); }
+.quiz-q label.wrong{ border-color:var(--red); background:rgba(251,77,92,.08); }
+.quiz-q .explain{ display:none; font-size:.8rem; color:var(--text-dim); border-top:1px dashed rgba(34,211,238,.2); margin-top:8px; padding-top:8px; line-height:1.6; }
+.quiz-q.graded .explain{ display:block; }
+#quiz-score{
+  display:none; font-size:1rem; font-weight:700; letter-spacing:.1em;
+  border:1px solid var(--cyan-dim); border-radius:var(--radius); padding:12px 18px;
+  margin-bottom:16px; max-width:860px; background:var(--cyan-faint);
+}
+#quiz-score.great{ color:var(--green); border-color:var(--green-dim); background:rgba(52,211,153,.08); }
+#quiz-score.ok{ color:var(--amber); }
+#quiz-score.poor{ color:var(--red); border-color:var(--red-dim); }
+
+::-webkit-scrollbar{ width:9px; height:9px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:rgba(34,211,238,.25); border-radius:5px; }
+::-webkit-scrollbar-thumb:hover{ background:rgba(34,211,238,.45); }
+
+@media (max-width:900px){
+  html,body{ overflow:auto; }
+  .app{ height:auto; }
+  .stage.active{ flex-direction:column; }
+  .lesson-nav, .task-nav{ flex:0 0 auto; }
+  .practice-top{ max-height:none; }
+  .practice-editor{ min-height:260px; }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- ================= HEADER ================= -->
+  <header>
+    <div class="brand">PY//LEARN <small>· TOPICS 3–4 · PRINT() &amp; COMMENTS</small></div>
+    <div class="credit" id="app-credit" aria-label="Application credit"></div>
+    <div class="status" id="status"><span class="dot"></span><span id="status-text">Booting Python runtime…</span></div>
+    <div class="spacer"></div>
+    <nav class="mode-tabs" role="tablist">
+      <button class="mode-tab active" data-mode="learn" role="tab">📖 Learn</button>
+      <button class="mode-tab" data-mode="practice" role="tab">⌨ Practice</button>
+      <button class="mode-tab" data-mode="quiz" role="tab">✔ Quiz</button>
+    </nav>
+  </header>
+
+  <!-- ================= LEARN ================= -->
+  <div class="stage active" id="stage-learn">
+    <aside class="panel lesson-nav">
+      <div class="panel-head">Lessons</div>
+      <div class="panel-body" id="lesson-nav-list"></div>
+    </aside>
+    <main class="panel lesson-main">
+      <div class="panel-head">Lesson Content <span id="lesson-tag" style="margin-left:auto;color:var(--text-dim);letter-spacing:.1em;"></span></div>
+      <div class="panel-body"><div class="lesson" id="lesson-body"></div></div>
+    </main>
+  </div>
+
+  <!-- ================= PRACTICE ================= -->
+  <div class="stage" id="stage-practice">
+    <aside class="panel task-nav">
+      <div class="panel-head">Challenges</div>
+      <div class="panel-body" id="task-nav-list"></div>
+    </aside>
+    <div class="practice-main">
+      <section class="panel practice-top">
+        <div class="panel-head">Task Brief</div>
+        <div class="panel-body" id="task-brief"></div>
+      </section>
+      <section class="panel practice-editor">
+        <div class="panel-head">Your Code
+          <span class="btns">
+            <button id="btn-task-run">▶ Run</button>
+            <button id="btn-task-check" class="primary">✔ Check My Code</button>
+            <button id="btn-task-reset">Reset</button>
+          </span>
+        </div>
+        <div class="panel-body"><textarea id="task-code"></textarea></div>
+      </section>
+      <section class="panel practice-result">
+        <div class="panel-head">Result</div>
+        <div class="panel-body" id="task-result"><span class="placeholder">Run your code, then press “Check My Code” to test it against the expected output.</span></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= QUIZ ================= -->
+  <div class="stage" id="stage-quiz">
+    <main class="panel">
+      <div class="panel-head">Topic 3 &amp; 4 Quiz — print() and Comments
+        <span style="margin-left:auto;display:flex;gap:8px;">
+          <button id="btn-quiz-submit" class="primary">Submit Answers</button>
+          <button id="btn-quiz-retry">Try Again</button>
+        </span>
+      </div>
+      <div class="panel-body">
+        <div id="quiz-score"></div>
+        <div id="quiz-list"></div>
+      </div>
+    </main>
+  </div>
+
+</div>
+
+<script>
+/* ====================================================================
+   PY//LEARN — Topics 3 & 4 interactive courseware (vanilla JS)
+   §0 Signature   — integrity-protected developer credit
+   §1 Runtime     — Pyodide boot + runSnippet(): stdout/err capture
+   §2 LEARN       — lesson data, nav, runnable example cards
+   §3 PRACTICE    — challenges, CodeMirror, output checking engine
+   §4 QUIZ        — MCQ data, grading, explanations
+   ==================================================================== */
+
+/* ============ §0 APPLICATION SIGNATURE (integrity-protected) ========
+   Credit stored as Base64 fragments + djb2 checksum. Tampering with
+   either locks the app. See PY//LAB for the same mechanism.          */
+const _SIG_F = ["RGV2ZWxvcGVkIGJ5IA==", "UmFqZXNoIFIgTW9oYW4=", "IGZvciBJVEUgQ1c="];
+const _SIG_H = 3332075197;
+function _sigText(){ try{ return _SIG_F.map(f => atob(f)).join(""); }catch(e){ return ""; } }
+function _sigHash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h * 33) + s.charCodeAt(i)) >>> 0; return h; }
+function verifySignature(){ return _sigHash(_sigText()) === _SIG_H; }
+function lockApp(){
+  document.body.innerHTML =
+    '<div style="height:100vh;display:flex;align-items:center;justify-content:center;font-family:monospace;color:#fb4d5c;background:#0b0f19;text-align:center;padding:20px;">' +
+    '⛔ INTEGRITY CHECK FAILED<br><br>The application signature has been modified.<br>Restore the original file to continue.</div>';
+  throw new Error("signature integrity failure");
+}
+
+const $ = id => document.getElementById(id);
+
+/* ============ §1 PYTHON RUNTIME =====================================
+   runSnippet(code) executes Python and returns {out, err}:
+   • stdout (print output)  → collected into `out`
+   • stderr + any exception → collected into `err` (full traceback)   */
+let pyodide = null;
+
+function setStatus(mode, text){
+  const el = $("status");
+  el.classList.remove("ready", "running");
+  if (mode) el.classList.add(mode);
+  $("status-text").textContent = text;
+}
+
+async function bootPyodide(){
+  try{
+    pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/" });
+    pyodide.runPython(`
+import builtins, js
+def _browser_input(prompt_text=""):
+    result = js.window.prompt(str(prompt_text))
+    if result is None:
+        raise EOFError("input() was cancelled by the user")
+    print(str(prompt_text) + result)
+    return result
+builtins.input = _browser_input
+`);
+    setStatus("ready", "Python 3.11 ready");
+  }catch(err){
+    setStatus("", "Runtime failed to load — check internet & reload");
+  }
+}
+
+async function runSnippet(code){
+  if (!pyodide) return { out:"", err:"Python runtime is still loading — try again in a moment." };
+  let out = "", err = "";
+  pyodide.setStdout({ batched: t => { out += t + "\n"; } });
+  pyodide.setStderr({ batched: t => { err += t + "\n"; } });
+  setStatus("running", "Executing…");
+  try{
+    await pyodide.runPythonAsync(code);
+  }catch(e){
+    err += (e.message || String(e));
+  }finally{
+    setStatus("ready", "Python 3.11 ready");
+  }
+  return { out, err };
+}
+
+/* ============ §2 LEARN MODE =========================================
+   Lessons follow the ITE handout section by section. Examples marked
+   predict:true nudge students to guess the output before running.    */
+const LESSONS = [
+  { topic:"Topic 3 · The print() function", id:"t3-1", title:"3.1 My first program",
+    html: `
+<h2>My first Python program</h2>
+<div class="objective">Objective 1 · use print() to display text on the console</div>
+<p>It's time to write real, working Python code — and it starts with one line:</p>
+<p>The first program consists of the following parts:</p>
+<ul>
+  <li>the word <code>print</code>;</li>
+  <li>an opening parenthesis <code>(</code>;</li>
+  <li>a quotation mark <code>"</code>;</li>
+  <li>a line of text: <code>Hello, World!</code>;</li>
+  <li>another quotation mark <code>"</code>;</li>
+  <li>a closing parenthesis <code>)</code>.</li>
+</ul>
+<div class="callout">⚠ Each part plays an important role. A <b>syntax error</b> occurs if you miss a quotation mark or parenthesis, or misspell <code>print</code>. Try deleting one quote in the Practice sandbox and watch the error message!</div>`,
+    examples: [
+      { code:`print("Hello, World!")` }
+    ]},
+
+  { topic:"Topic 3 · The print() function", id:"t3-2", title:"3.2 What is a function?",
+    html: `
+<h2>What is a function?</h2>
+<div class="objective">Concept · functions cause effects and evaluate values</div>
+<p>A <b>function</b> is a separate part of computer code, usually belonging to a <b>module</b>. Most modules are built in — you don't install anything to use <code>print()</code>. A function is able to:</p>
+<ul>
+  <li><b>cause some effect</b> — send text to the terminal, create a file, draw an image, play a sound — something unheard of in mathematics;</li>
+  <li><b>evaluate a value</b> — like the square root of a number or the length of a text — which makes Python functions relatives of mathematical ones.</li>
+</ul>
+<p>Notice below: <code>print()</code> with <b>no arguments</b> prints an empty line.</p>`,
+    examples: [
+      { code:`print("The itsy bitsy spider climbed up the waterspout.")
+print()
+print("Down came the rain and washed the spider out.")` }
+    ]},
+
+  { topic:"Topic 3 · The print() function", id:"t3-3", title:"3.3 Escape \\n newline",
+    html: `
+<h2>The escape and newline characters</h2>
+<div class="objective">Concept · \\ is the escape character, \\n means newline</div>
+<p>The backslash <code>\\</code> has a special meaning inside strings — it is the <b>escape character</b>. The letter <code>n</code> placed after it comes from the word <b>newline</b>: together, <code>\\n</code> breaks the text onto a new line.</p>`,
+    examples: [
+      { predict:true, code:`print("The itsy bitsy spider \\nclimbed up the waterspout.")
+print()
+print("Down came the rain \\nand washed the spider out.")` }
+    ]},
+
+  { topic:"Topic 3 · The print() function", id:"t3-4", title:"3.4 Multiple arguments",
+    html: `
+<h2>Using multiple arguments</h2>
+<div class="objective">Objective 2 · pass more than one argument to print()</div>
+<p>You can feed <code>print()</code> with <b>more than one argument</b>, separated by commas. Predict the output first — how are the pieces joined in the console?</p>
+<div class="callout">The comma separates each string, and by default print() joins them with a <b>single space</b> in the output.</div>`,
+    examples: [
+      { predict:true, code:`print("The itsy bitsy spider" , "climbed up" , "the waterspout.")` }
+    ]},
+
+  { topic:"Topic 3 · The print() function", id:"t3-5", title:"3.5 Keyword argument: end",
+    html: `
+<h2>Keyword arguments — <code>end</code></h2>
+<div class="objective">Objective 3 · use the end keyword argument</div>
+<p>Python offers another mechanism for passing arguments: <b>keyword arguments</b>. Rules to remember:</p>
+<ul>
+  <li>a keyword argument has three elements: a keyword identifying it (<code>end</code> here), an equal sign <code>=</code>, and a value;</li>
+  <li>keyword arguments must be placed <b>after the last positional argument</b> — this is very important!</li>
+</ul>
+<p>Normally every print() ends with a newline. Setting <code>end=" "</code> replaces that newline with a space, so the next print continues on the same line:</p>`,
+    examples: [
+      { code:`print("My name is", "Python.")
+print("Monty Python.")` },
+      { predict:true, code:`print("My name is", "Python.", end = " ")
+print("Monty Python.")` }
+    ]},
+
+  { topic:"Topic 3 · The print() function", id:"t3-6", title:"3.6 Keyword argument: sep",
+    html: `
+<h2>Keyword arguments — <code>sep</code></h2>
+<div class="objective">Objective 3 · use the sep keyword argument</div>
+<p>The second keyword argument is named <code>sep</code> (like <b>sep</b>arator). It changes what print() puts <b>between</b> the arguments — a dash instead of the default space, for example.</p>
+<div class="callout">The sep value may also be an <b>empty string</b> <code>sep=""</code> — try it yourself in the sandbox!</div>
+<p>Both keyword arguments may be <b>mixed in one invocation</b>. The last example below doesn't make much sense, but it visibly presents how <code>end</code> and <code>sep</code> interact. <b>Can you predict the output?</b> Run it and check your prediction.</p>`,
+    examples: [
+      { predict:true, code:`print("My", "name", "is", "Monty", "Python.")
+print("My", "name", "is", "Monty", "Python.", sep= "-")` },
+      { predict:true, code:`print("My", "name", "is", sep= "_", end="*")
+print("Monty", "Python.", sep= " *** ", end="*\\n")` }
+    ]},
+
+  { topic:"Topic 3 · The print() function", id:"t3-7", title:"3.7 Built-in functions & help()",
+    html: `
+<h2>Python built-in functions</h2>
+<div class="objective">Reference · discovering what a built-in function does</div>
+<p>The Python interpreter has many functions built in and always available — <code>abs()</code>, <code>input()</code>, <code>len()</code>, <code>pow()</code>, <code>round()</code>, <code>str()</code>, <code>type()</code> and dozens more.</p>
+<p>It's difficult to remember them all, so Python can explain them to you with the <code>help()</code> function. For example, to learn about <code>pow</code>:</p>`,
+    examples: [
+      { code:`help(pow)` }
+    ]},
+
+  { topic:"Topic 4 · Comments", id:"t4-1", title:"4.1 Why comments?",
+    html: `
+<h2>Comments in Python</h2>
+<div class="objective">Objective · understand the purpose of comments</div>
+<p>Comments <b>do not change the outcome</b> of a program, but they play an important role in all programming. A comment is text that lets someone know what you have done — it improves the <b>readability</b> of code by explaining it in simple English.</p>
+<p>This is especially helpful when someone else analyses your code for bug fixing or logic changes: reading a comment reveals the purpose much faster than decoding the code itself.</p>`,
+    examples: [
+      { code:`# This is just a text, it won't be executed.
+print("Python comment example")` }
+    ]},
+
+  { topic:"Topic 4 · Comments", id:"t4-2", title:"4.2 Single & multi-line",
+    html: `
+<h2>Types of comments</h2>
+<div class="objective">Objectives 1 &amp; 2 · single line and multiple line comments</div>
+<p>There are two types of comments in Python:</p>
+<ul>
+  <li><b>Single line</b> — starts with the <code>#</code> character. Anything after it on that line is ignored by Python.</li>
+  <li><b>Multi-line</b> — wrapped in <b>triple quotes</b> <code>'''</code> at the beginning and the end.</li>
+</ul>
+<p>This program shows <b>three</b> comment styles at once: a multi-line comment, a single-line comment on its own line, and a comment <b>after code on the same line</b>:</p>`,
+    examples: [
+      { code:`'''
+We are writing a simple program here
+First print statement.
+This is a multiple line comment.
+'''
+print("Hello Guys")
+# Second print statement
+print("How are You all?")
+print("Welcome to Basic Python Programming") # Third print statement` }
+    ]},
+
+  { topic:"Topic 4 · Comments", id:"t4-3", title:"4.3 # inside quotes",
+    html: `
+<h2>The # character inside quotes</h2>
+<div class="objective">Concept · # inside a string is NOT a comment</div>
+<p>When the <code>#</code> character appears <b>inside quotation marks</b>, it is part of the string — it is <b>not</b> treated as a comment. Predict the output, then run it:</p>`,
+    examples: [
+      { predict:true, code:`print("#this is not a comment")` }
+    ]}
+];
+
+let activeLesson = 0;
+
+function esc(s){ const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function renderLessonNav(){
+  const list = $("lesson-nav-list");
+  list.innerHTML = "";
+  let lastTopic = "";
+  LESSONS.forEach((L, i) => {
+    if (L.topic !== lastTopic){
+      lastTopic = L.topic;
+      const t = document.createElement("div");
+      t.className = "nav-topic"; t.textContent = L.topic;
+      list.appendChild(t);
+    }
+    const item = document.createElement("div");
+    item.className = "nav-item" + (i === activeLesson ? " active" : "");
+    item.textContent = L.title;
+    item.addEventListener("click", () => { activeLesson = i; renderLessonNav(); renderLesson(); });
+    list.appendChild(item);
+  });
+}
+
+function renderLesson(){
+  const L = LESSONS[activeLesson];
+  $("lesson-tag").textContent = L.topic;
+  const body = $("lesson-body");
+  body.innerHTML = L.html;   // trusted static lesson content defined above
+
+  L.examples.forEach((ex, n) => {
+    const card = document.createElement("div");
+    card.className = "example";
+
+    const head = document.createElement("div");
+    head.className = "ex-head";
+    head.innerHTML = `<span>Example ${n + 1}</span>` +
+      (ex.predict ? `<span class="predict">🔮 predict the output first!</span>` : "");
+    const runBtn = document.createElement("button");
+    runBtn.textContent = "▶ Run example";
+    head.appendChild(runBtn);
+    const sandboxBtn = document.createElement("button");
+    sandboxBtn.textContent = "✎ Open in sandbox";
+    sandboxBtn.style.marginLeft = "6px";
+    head.appendChild(sandboxBtn);
+    card.appendChild(head);
+
+    const pre = document.createElement("pre");
+    pre.textContent = ex.code;
+    card.appendChild(pre);
+
+    const out = document.createElement("div");
+    out.className = "ex-out";
+    card.appendChild(out);
+
+    runBtn.addEventListener("click", async () => {
+      runBtn.disabled = true;
+      const r = await runSnippet(ex.code);
+      out.style.display = "block";
+      out.innerHTML = `<span class="lbl">CONSOLE OUTPUT</span>` +
+        (r.out ? esc(r.out) : "") +
+        (r.err ? `<span class="err">${esc(r.err)}</span>` : "") +
+        (!r.out && !r.err ? `<i style="color:var(--text-dim)">(no output)</i>` : "");
+      runBtn.disabled = false;
+    });
+    sandboxBtn.addEventListener("click", () => {
+      switchMode("practice");
+      selectTask(0);                       // task 0 = free sandbox
+      taskEditor.setValue(ex.code);
+    });
+
+    body.appendChild(card);
+  });
+  $("lesson-body").parentElement.scrollTop = 0;
+}
+
+/* ============ §3 PRACTICE MODE ======================================
+   Each challenge defines: brief (HTML), starter code, expected output
+   (null = free sandbox, no checking) and optional source-code rules
+   (mustContain regexes) so students use the intended technique.
+   CHECKING: runSnippet() captures stdout; both the student output and
+   the expected output are normalised (trailing spaces stripped per
+   line, trailing blank lines removed) and compared line by line.     */
+const TASKS = [
+  { title:"Sandbox (free play)", expected:null,
+    brief:`<h3>🧪 Sandbox — try anything</h3>
+<p>No checking here — experiment freely with <code>print()</code>, <code>\\n</code>, <code>sep</code>, <code>end</code> and comments. Examples from the Learn tab can be opened here with <b>✎ Open in sandbox</b>.</p>`,
+    starter:`# Sandbox — write anything and press Run
+print("Hello from the sandbox!")` },
+
+  { title:"1 · Hello, World!", 
+    brief:`<h3>Challenge 1 — your first program</h3>
+<p>Write a program that displays <b>exactly</b> this text on the console. Watch the quotation marks and parentheses — one missing character causes a syntax error!</p>`,
+    expected:`Hello, World!`,
+    starter:`# Type your first program below:
+` },
+
+  { title:"2 · Newline \\n", 
+    brief:`<h3>Challenge 2 — the escape character</h3>
+<p>Using <b>one single</b> <code>print()</code> statement and the <code>\\n</code> escape character, produce this two-line output:</p>`,
+    expected:`The itsy bitsy spider
+climbed up the waterspout.`,
+    starter:`# Use ONE print() with \\n inside the string:
+`,
+    mustContain:[ { re:/\\n/, msg:"Use the \\n escape character inside your string." },
+                  { re:/^[^\n]*print[\s\S]*$/, msg:"Use the print() function." } ],
+    maxPrints:1 },
+
+  { title:"3 · sep & end ★", 
+    brief:`<h3>Challenge 3 — handout practice 1</h3>
+<p>Start from these two statements:</p>
+<p><code>print("Programming","Essentials","in")</code><br><code>print("Python")</code></p>
+<p>Modify them with the <b>keyword arguments</b> <code>sep</code> and <code>end</code> to obtain the output below (don't just print one big string!):</p>`,
+    expected:`Programming***Essentials***in...Python`,
+    starter:`print("Programming","Essentials","in")
+print("Python")`,
+    mustContain:[ { re:/sep\s*=/, msg:"Use the sep= keyword argument." },
+                  { re:/end\s*=/, msg:"Use the end= keyword argument." } ] },
+
+  { title:"4 · Quotes in text ★", 
+    brief:`<h3>Challenge 4 — handout practice 2</h3>
+<p>Demonstrate how to display this statement, which contains <b>single quote characters</b>, exactly as shown:</p>
+<div class="callout">Tip: if your text contains single quotes <code>'</code>, wrap the whole string in double quotes <code>"…"</code>.</div>`,
+    expected:`If you are calling from overseas, please dial '+65 6' in place of any number starting with '1800'`,
+    starter:`# Print the overseas dialling statement exactly:
+` },
+
+  { title:"5 · Three comment styles", 
+    brief:`<h3>Challenge 5 — comments (Topic 4)</h3>
+<p>Write a program that produces the output below AND contains all three comment styles from the notes: a <b>multi-line comment</b> (<code>'''</code>), a <b>single-line comment</b> on its own line (<code>#</code>), and an <b>inline comment</b> after a statement. Comments must not change the output!</p>`,
+    expected:`Hello Guys
+How are You all?
+Welcome to Basic Python Programming`,
+    starter:`# Add a multi-line comment, a single-line comment and an inline comment:
+`,
+    mustContain:[ { re:/'''[\s\S]*?'''|"""[\s\S]*?"""/, msg:"Include a multi-line comment using triple quotes '''." },
+                  { re:/#/, msg:"Include a # single-line comment." } ] },
+
+  { title:"6 · # is not a comment", 
+    brief:`<h3>Challenge 6 — # inside quotes</h3>
+<p>Prove that <code>#</code> inside quotation marks is <b>not</b> a comment: display this exact line on the console.</p>`,
+    expected:`#this is not a comment`,
+    starter:`` }
+];
+
+let activeTask = 0;
+const taskState = TASKS.map(t => ({ code:t.starter, done:false }));
+
+const taskEditor = CodeMirror.fromTextArea($("task-code"), {
+  mode:"python", lineNumbers:true, indentUnit:4, smartIndent:true,
+  matchBrackets:true, viewportMargin:Infinity
+});
+
+function renderTaskNav(){
+  const list = $("task-nav-list");
+  list.innerHTML = "";
+  TASKS.forEach((t, i) => {
+    const item = document.createElement("div");
+    item.className = "nav-item task-item" + (i === activeTask ? " active" : "") + (taskState[i].done ? " done" : "");
+    item.innerHTML = `<span class="tick">✔</span><span>${t.title}</span>`;
+    item.addEventListener("click", () => selectTask(i));
+    list.appendChild(item);
+  });
+}
+
+function selectTask(i){
+  taskState[activeTask].code = taskEditor.getValue();   // keep work
+  activeTask = i;
+  const t = TASKS[i];
+  let brief = t.brief;
+  $("task-brief").innerHTML = brief +
+    (t.expected !== null
+      ? `<div style="font-size:.68rem;letter-spacing:.14em;color:var(--text-dim);margin:6px 0 4px;">EXPECTED OUTPUT</div><div class="expected">${esc(t.expected)}</div>`
+      : "");
+  taskEditor.setValue(taskState[i].code);
+  $("task-result").innerHTML = `<span class="placeholder">Run your code, then press “Check My Code” to test it against the expected output.</span>`;
+  renderTaskNav();
+  taskEditor.focus();
+}
+
+/* normalise output for fair comparison */
+function normalise(text){
+  const lines = text.replace(/\r/g, "").split("\n").map(l => l.replace(/\s+$/,""));
+  while (lines.length && lines[lines.length-1] === "") lines.pop();
+  return lines.join("\n");
+}
+
+async function runTask(check){
+  if (!verifySignature()) return lockApp();
+  taskState[activeTask].code = taskEditor.getValue();
+  const t = TASKS[activeTask];
+  const res = $("task-result");
+  const r = await runSnippet(taskEditor.getValue());
+
+  /* plain run: just show output / errors */
+  if (!check || t.expected === null){
+    res.innerHTML =
+      (r.out ? esc(r.out) : "") +
+      (r.err ? `<div class="err-text">${esc(r.err)}</div>` : "") +
+      (!r.out && !r.err ? `<span class="placeholder">(no output)</span>` : "");
+    return;
+  }
+
+  /* CHECK MODE */
+  let html = "";
+  if (r.err){
+    html += `<div class="verdict fail">✘ NOT YET — your program has an error</div>\n<div class="err-text">${esc(r.err)}</div>`;
+    res.innerHTML = html; return;
+  }
+
+  const got = normalise(r.out);
+  const want = normalise(t.expected);
+  const outputOK = got === want;
+
+  /* source-code technique checks (e.g. must use sep=/end=) */
+  const src = taskEditor.getValue();
+  const misses = (t.mustContain || []).filter(rule => !rule.re.test(src)).map(rule => rule.msg);
+  if (t.maxPrints){
+    const count = (src.match(/print\s*\(/g) || []).length;
+    if (count > t.maxPrints) misses.push(`Use only ${t.maxPrints} print() statement (you used ${count}).`);
+  }
+
+  if (outputOK && misses.length === 0){
+    taskState[activeTask].done = true;
+    renderTaskNav();
+    html += `<div class="verdict pass">✔ PASSED — well done!</div>\n${esc(got)}`;
+  } else {
+    html += `<div class="verdict fail">✘ NOT YET — keep trying</div>`;
+    if (misses.length) html += `<div class="hint-text">Hint: ${misses.map(esc).join(" ")}</div>`;
+    if (!outputOK){
+      html += `<div class="diff-grid">
+        <div class="diff-box"><span class="lbl">EXPECTED</span>${esc(want)}</div>
+        <div class="diff-box bad"><span class="lbl">YOUR OUTPUT</span>${got ? esc(got) : "<i>(no output)</i>"}</div>
+      </div>`;
+    } else {
+      html += `\n${esc(got)}`;
+    }
+  }
+  res.innerHTML = html;
+}
+
+$("btn-task-run").addEventListener("click", () => runTask(false));
+$("btn-task-check").addEventListener("click", () => runTask(true));
+$("btn-task-reset").addEventListener("click", () => {
+  if (!confirm("Reset this challenge to its starter code?")) return;
+  taskEditor.setValue(TASKS[activeTask].starter);
+  taskState[activeTask].code = TASKS[activeTask].starter;
+});
+
+/* ============ §4 QUIZ MODE ========================================== */
+const QUIZ = [
+  { q:`Which line displays <code>Hello, World!</code> correctly?`,
+    opts:[`print("Hello, World!")`, `print("Hello, World!"`, `Print("Hello, World!")`, `print(Hello, World!)`],
+    a:0, ex:`It needs the lowercase word print, both parentheses and both quotation marks. Missing any of them — or a capital P — causes an error.` },
+  { q:`What does the escape sequence <code>\\n</code> do inside a string?`,
+    opts:[`Prints the letter n`, `Moves the following text to a new line`, `Adds a space`, `Ends the program`],
+    a:1, ex:`The backslash is the escape character; \\n comes from the word newline.` },
+  { q:`What is the output of <code>print("A", "B", "C")</code>?`,
+    opts:[`ABC`, `A B C`, `A,B,C`, `A-B-C`],
+    a:1, ex:`With multiple arguments, print() joins them with a single space by default.` },
+  { q:`What does <code>print()</code> with no arguments do?`,
+    opts:[`Causes a syntax error`, `Prints the word "print"`, `Prints an empty line`, `Does nothing at all`],
+    a:2, ex:`An empty print() still outputs its ending newline — so you see a blank line.` },
+  { q:`Which keyword argument changes what print() places <b>between</b> the arguments?`,
+    opts:[`end`, `sep`, `gap`, `join`],
+    a:1, ex:`sep is short for separator. end controls what is printed at the end of the line instead.` },
+  { q:`What is the output of:<br><code>print("My", "name", sep="-")</code>?`,
+    opts:[`My name`, `My-name`, `My - name`, `Myname`],
+    a:1, ex:`sep="-" replaces the default space between arguments with a dash.` },
+  { q:`Where must keyword arguments like <code>end=</code> and <code>sep=</code> be placed?`,
+    opts:[`Before all other arguments`, `Anywhere in the brackets`, `After the last positional argument`, `On a separate line`],
+    a:2, ex:`This is the very important rule from the notes: keyword arguments always come after the positional ones.` },
+  { q:`What is the output of:<br><code>print("Hi", end="*")</code><br><code>print("Bye")</code>?`,
+    opts:[`Hi*Bye`, `Hi *Bye`, `Hi*<br>Bye`, `HiBye*`],
+    a:0, ex:`end="*" replaces the first line's newline with *, so Bye continues on the same line: Hi*Bye.` },
+  { q:`Which character starts a single-line comment in Python?`,
+    opts:[`//`, `#`, `--`, `/*`],
+    a:1, ex:`Python uses # for single-line comments. // and /* belong to other languages.` },
+  { q:`How do you write a multi-line comment in Python?`,
+    opts:[`Wrap it in triple quotes ''' … '''`, `Start every line with //`, `Wrap it in ( … )`, `Use the word comment:`],
+    a:0, ex:`Triple single quotes at the beginning and the end mark a multi-line comment.` },
+  { q:`Do comments change the outcome of a program?`,
+    opts:[`Yes, they make it run slower`, `Yes, they add output`, `No — they are ignored by Python`, `Only multi-line comments do`],
+    a:2, ex:`Comments exist for humans: they improve readability but Python ignores them completely.` },
+  { q:`What is the output of <code>print("#this is not a comment")</code>?`,
+    opts:[`Nothing — it's a comment`, `this is not a comment`, `#this is not a comment`, `A syntax error`],
+    a:2, ex:`A # inside quotation marks is part of the string, not a comment — it is printed as-is.` }
+];
+
+function renderQuiz(){
+  const list = $("quiz-list");
+  list.innerHTML = "";
+  QUIZ.forEach((item, qi) => {
+    const box = document.createElement("div");
+    box.className = "quiz-q";
+    box.dataset.q = qi;
+    let inner = `<div class="q-text"><span class="q-num">Q${qi + 1}.</span>${item.q}</div>`;
+    item.opts.forEach((opt, oi) => {
+      inner += `<label><input type="radio" name="q${qi}" value="${oi}"><code>${esc(opt).replace(/&lt;br&gt;/g,"<br>")}</code></label>`;
+    });
+    inner += `<div class="explain">💡 ${item.ex}</div>`;
+    box.innerHTML = inner;
+    list.appendChild(box);
+  });
+  $("quiz-score").style.display = "none";
+  $("btn-quiz-submit").disabled = false;
+}
+
+function gradeQuiz(){
+  if (!verifySignature()) return lockApp();
+  let score = 0, answered = 0;
+  document.querySelectorAll(".quiz-q").forEach(box => {
+    const qi = +box.dataset.q;
+    const chosen = box.querySelector("input:checked");
+    if (chosen) answered++;
+    box.classList.add("graded");
+    box.querySelectorAll("label").forEach((lab, oi) => {
+      const input = lab.querySelector("input");
+      input.disabled = true;
+      if (oi === QUIZ[qi].a) lab.classList.add("correct");
+      else if (chosen && +chosen.value === oi) lab.classList.add("wrong");
+    });
+    if (chosen && +chosen.value === QUIZ[qi].a) score++;
+  });
+  if (answered < QUIZ.length &&
+      !confirm(`You have answered ${answered} of ${QUIZ.length} questions. Unanswered questions count as wrong — submit anyway?\n\n(Press Cancel, then Try Again to keep answering.)`)){
+    /* un-grade so they can continue */
+    renderQuiz(); return;
+  }
+  const pct = Math.round(score / QUIZ.length * 100);
+  const scoreEl = $("quiz-score");
+  scoreEl.className = pct >= 80 ? "great" : pct >= 50 ? "ok" : "poor";
+  scoreEl.id = "quiz-score";
+  scoreEl.style.display = "block";
+  scoreEl.textContent =
+    `SCORE: ${score} / ${QUIZ.length} (${pct}%) — ` +
+    (pct >= 80 ? "Excellent! You have mastered print() and comments. 🏆"
+     : pct >= 50 ? "Good effort — review the explanations below, then try again."
+     : "Keep practising — revisit the Learn tab, then try again.");
+  $("btn-quiz-submit").disabled = true;
+  scoreEl.scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+$("btn-quiz-submit").addEventListener("click", gradeQuiz);
+$("btn-quiz-retry").addEventListener("click", renderQuiz);
+
+/* ============ MODE SWITCHING ======================================== */
+function switchMode(mode){
+  document.querySelectorAll(".mode-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.mode === mode));
+  document.querySelectorAll(".stage").forEach(s => s.classList.remove("active"));
+  $("stage-" + mode).classList.add("active");
+  if (mode === "practice") taskEditor.refresh();   // CodeMirror needs a refresh when unhidden
+}
+document.querySelectorAll(".mode-tab").forEach(tab =>
+  tab.addEventListener("click", () => switchMode(tab.dataset.mode)));
+
+/* ============ BOOT ================================================== */
+if (!verifySignature()) lockApp();
+(function mountCredit(){
+  const credit = _sigText();
+  const el = $("app-credit");
+  el.textContent = credit; el.title = credit;
+  console.log("%c" + credit, "color:#22d3ee;font-weight:bold;");
+  new MutationObserver(() => {
+    if (!verifySignature()) return lockApp();
+    if (el.textContent !== credit) el.textContent = credit;
+  }).observe(el, { childList:true, characterData:true, subtree:true });
+})();
+
+renderLessonNav();
+renderLesson();
+renderTaskNav();
+selectTask(0);
+renderQuiz();
+bootPyodide();
+</script>
+</body>
+</html>
