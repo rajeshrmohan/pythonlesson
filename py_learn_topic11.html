@@ -15,6 +15,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -53,6 +55,51 @@ body{
   color:var(--text);
   font-family:var(--font-ui);
 }
+
+/* ---------------- Start gate (collects name + class) ---------------- */
+#gate{
+  position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(ellipse 70% 50% at 50% 20%, rgba(34,211,238,.08), transparent 70%), var(--bg);
+  padding:20px;
+}
+#gate-card{
+  position:relative; width:100%; max-width:440px;
+  background:var(--bg-panel); border:1px solid var(--cyan-dim); border-radius:8px;
+  box-shadow:0 0 40px -10px var(--cyan-dim); padding:34px 32px;
+}
+#gate-card::before, #gate-card::after{ content:""; position:absolute; width:18px; height:18px; pointer-events:none; }
+#gate-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
+#gate-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
+#gate-card h1{ font-size:1.1rem; letter-spacing:.18em; color:var(--cyan); text-shadow:0 0 12px var(--cyan-dim); margin-bottom:4px; }
+#gate-card .sub{ font-size:.72rem; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; margin-bottom:22px; }
+#gate-card label{ display:block; font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 6px; }
+#gate-card input{
+  width:100%; padding:11px 12px; font-family:var(--font-ui); font-size:.9rem;
+  background:rgba(5,9,18,.6); border:1px solid rgba(34,211,238,.3); border-radius:5px; color:var(--text);
+}
+#gate-card input:focus{ outline:2px solid var(--cyan); outline-offset:1px; }
+#gate-error{ color:var(--red); font-size:.75rem; margin-top:10px; display:none; }
+#gate-card button{
+  width:100%; margin-top:22px; padding:12px; font-family:var(--font-ui); font-size:.85rem;
+  letter-spacing:.14em; text-transform:uppercase; font-weight:700; cursor:pointer;
+  color:#04141a; background:linear-gradient(180deg,#67e8f9,var(--cyan)); border:1px solid var(--cyan);
+  border-radius:5px; box-shadow:0 0 16px -2px var(--cyan-dim);
+}
+#gate-card button:hover{ box-shadow:0 0 22px 0 var(--cyan-dim); }
+#gate-card .note{ font-size:.7rem; color:var(--text-dim); line-height:1.6; margin-top:18px; border-top:1px dashed rgba(34,211,238,.2); padding-top:14px; }
+
+/* ---------------- Main app (hidden until gate passed) ---------------- */
+#main-app.hidden{ display:none; }
+#student-badge{
+  font-size:.68rem; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase;
+  border-left:1px solid rgba(34,211,238,.25); padding-left:12px; white-space:nowrap;
+}
+#student-badge b{ color:var(--cyan); font-weight:600; }
+#btn-download-pdf{
+  color:#04140c; font-weight:700; background:linear-gradient(180deg,#6ee7b7,var(--green));
+  border-color:var(--green); box-shadow:0 0 14px -2px var(--green-dim);
+}
+#btn-download-pdf:hover{ box-shadow:0 0 20px 0 var(--green-dim); }
 
 .app{ display:flex; flex-direction:column; height:100vh; width:100vw; padding:12px; gap:12px; }
 header{
@@ -276,12 +323,34 @@ button.primary{
 </head>
 
 <body>
+
+<!-- ================= START GATE — collects name & class ================= -->
+<div id="gate">
+  <div id="gate-card">
+    <h1>PY//LEARN · TOPIC 11</h1>
+    <div class="sub">While Loop</div>
+
+    <label for="gate-name">Student Name</label>
+    <input id="gate-name" type="text" autocomplete="off" placeholder="e.g. Tan Wei Ming" maxlength="60">
+
+    <label for="gate-class">Class</label>
+    <input id="gate-class" type="text" autocomplete="off" placeholder="e.g. ICT2026" maxlength="30">
+
+    <div id="gate-error">Please enter both your name and class to begin.</div>
+    <button id="btn-gate-start">Begin</button>
+
+    <div class="note">Your name and class are printed on the results PDF you can download at any time from the header — they are not sent anywhere or stored online.</div>
+  </div>
+</div>
+
+<div id="main-app" class="hidden">
 <div class="app">
 
   <!-- ================= HEADER ================= -->
   <header>
     <div class="brand">PY//LEARN <small>· TOPIC 11 · WHILE LOOP</small></div>
     <div class="credit" id="app-credit" aria-label="Application credit"></div>
+    <div id="student-badge"></div>
     <div class="status" id="status"><span class="dot"></span><span id="status-text">Booting Python runtime…</span></div>
     <div class="spacer"></div>
     <nav class="mode-tabs" role="tablist">
@@ -289,6 +358,7 @@ button.primary{
       <button class="mode-tab" data-mode="practice" role="tab">⌨ Practice</button>
       <button class="mode-tab" data-mode="quiz" role="tab">✔ Quiz</button>
     </nav>
+    <button id="btn-download-pdf">⬇ Download Results PDF</button>
   </header>
 
   <!-- ================= LEARN ================= -->
@@ -348,6 +418,7 @@ button.primary{
   </div>
 
 </div>
+</div>
 
 <script>
 /* ====================================================================
@@ -384,6 +455,36 @@ function lockApp(){
 }
 
 const $ = id => document.getElementById(id);
+/* Strip HTML tags down to plain text — used when writing quiz question/option
+   text (which may contain <code> or <br>) into the PDF, since jsPDF only
+   accepts plain strings. */
+function stripHtml(html){
+  const d = document.createElement("div");
+  d.innerHTML = html.replace(/<br\s*\/?>/gi, " ");
+  return (d.textContent || d.innerText || "").replace(/\s+/g, " ").trim();
+}
+
+/* ============ START GATE — collects student name & class ============ */
+let studentName = "", studentClass = "";
+
+function trySubmitGate(){
+  const name = $("gate-name").value.trim();
+  const cls  = $("gate-class").value.trim();
+  if (!name || !cls){
+    $("gate-error").style.display = "block";
+    return;
+  }
+  studentName = name;
+  studentClass = cls;
+  $("student-badge").innerHTML = `Student: <b>${name.replace(/</g,"&lt;")}</b> &nbsp;·&nbsp; Class: <b>${cls.replace(/</g,"&lt;")}</b>`;
+  $("gate").remove();
+  $("main-app").classList.remove("hidden");
+  taskEditor.refresh();
+}
+$("btn-gate-start").addEventListener("click", trySubmitGate);
+$("gate-class").addEventListener("keydown", e => { if (e.key === "Enter") trySubmitGate(); });
+$("gate-name").addEventListener("keydown", e => { if (e.key === "Enter") $("gate-class").focus(); });
+$("gate-name").focus();
 
 /* ============ §1 PYTHON RUNTIME ===================================== */
 let pyodide = null;
@@ -751,7 +852,7 @@ guess = int(input("Guess the secret number: "))
 ];
 
 let activeTask = 0;
-const taskState = TASKS.map(t => ({ code:t.starter, done:false }));
+const taskState = TASKS.map(t => ({ code:t.starter, done:false, attempted:false }));
 
 const taskEditor = CodeMirror.fromTextArea($("task-code"), {
   mode:"python", lineNumbers:true, indentUnit:4, smartIndent:true,
@@ -796,6 +897,7 @@ async function runTask(check){
   const t = TASKS[activeTask];
   const res = $("task-result");
   const r = await runSnippet(taskEditor.getValue());
+  if (check && (t.expected !== null || t.checkCode)) taskState[activeTask].attempted = true;
 
   if (!check || (t.expected === null && !t.checkCode)){
     res.innerHTML =
@@ -893,9 +995,15 @@ const QUIZ = [
     a:1, ex:`count goes 5,4,3,2,1 (all != 0, so the body runs each time); once count reaches 0, the condition is false and the loop stops — 5 runs total.` }
 ];
 
+let quizSubmitted = false;
+let quizResults = [];   // filled during grading, used by the PDF export
+let quizScore = 0;
+
 function renderQuiz(){
   const list = $("quiz-list");
   list.innerHTML = "";
+  quizSubmitted = false;
+  quizResults = [];
   QUIZ.forEach((item, qi) => {
     const box = document.createElement("div");
     box.className = "quiz-q";
@@ -915,6 +1023,7 @@ function renderQuiz(){
 function gradeQuiz(){
   if (!verifySignature()) return lockApp();
   let score = 0, answered = 0;
+  const results = [];
   document.querySelectorAll(".quiz-q").forEach(box => {
     const qi = +box.dataset.q;
     const chosen = box.querySelector("input:checked");
@@ -926,12 +1035,22 @@ function gradeQuiz(){
       if (oi === QUIZ[qi].a) lab.classList.add("correct");
       else if (chosen && +chosen.value === oi) lab.classList.add("wrong");
     });
-    if (chosen && +chosen.value === QUIZ[qi].a) score++;
+    const isCorrect = chosen && +chosen.value === QUIZ[qi].a;
+    if (isCorrect) score++;
+    results.push({
+      question: stripHtml(QUIZ[qi].q),
+      yourAnswer: chosen ? stripHtml(QUIZ[qi].opts[+chosen.value]) : "(not answered)",
+      correctAnswer: stripHtml(QUIZ[qi].opts[QUIZ[qi].a]),
+      isCorrect: !!isCorrect
+    });
   });
   if (answered < QUIZ.length &&
       !confirm(`You have answered ${answered} of ${QUIZ.length} questions. Unanswered questions count as wrong — submit anyway?\n\n(Press Cancel, then Try Again to keep answering.)`)){
     renderQuiz(); return;
   }
+  quizResults = results;
+  quizScore = score;
+  quizSubmitted = true;
   const pct = Math.round(score / QUIZ.length * 100);
   const scoreEl = $("quiz-score");
   scoreEl.className = pct >= 80 ? "great" : pct >= 50 ? "ok" : "poor";
@@ -959,6 +1078,163 @@ function switchMode(mode){
 }
 document.querySelectorAll(".mode-tab").forEach(tab =>
   tab.addEventListener("click", () => switchMode(tab.dataset.mode)));
+
+/* ============ §5 PDF EXPORT =========================================
+   Builds a graded results report client-side with jsPDF + AutoTable:
+     • Student name, class, date
+     • Practice challenge table (challenge, status)
+     • Practice completion score
+     • Quiz per-question breakdown (question, your answer, correct
+       answer, result) — or a note if not yet submitted
+     • Overall summary + footer credit + page numbers
+   All of this runs entirely in the browser — no server involved.    */
+function generatePDF(){
+  if (!verifySignature()) return lockApp();
+  taskState[activeTask].code = taskEditor.getValue();
+
+  const anyPracticeAttempted = taskState.slice(1).some(s => s.attempted);
+  if (!anyPracticeAttempted && !quizSubmitted){
+    if (!confirm("You haven't attempted any practice challenges or submitted the quiz yet. Download an (empty) results PDF anyway?")) return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 14;
+
+  /* ---- Header ---- */
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(8, 120, 150);
+  doc.text("ITE College West — School of Electronics & Info-Comm Technology", marginX, 18);
+  doc.setFontSize(12);
+  doc.text("Basic Python Programming — Results (Topic 11 — While Loop)", marginX, 26);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(40);
+  doc.text(`Student Name: ${studentName}`, marginX, 36);
+  doc.text(`Class: ${studentClass}`, marginX, 42);
+  doc.text(`Date: ${new Date().toLocaleString()}`, marginX, 48);
+  doc.setDrawColor(34, 211, 238);
+  doc.line(marginX, 52, pageWidth - marginX, 52);
+
+  /* ---- Practice results table ---- */
+  const gradableTasks = TASKS.map((t, i) => ({ t, i })).filter(x => x.t.expected !== null || x.t.checkCode);
+  const passedCount = gradableTasks.filter(x => taskState[x.i].done).length;
+  const practiceRows = gradableTasks.map(x => {
+    const st = taskState[x.i];
+    const status = st.done ? "PASSED" : (st.attempted ? "ATTEMPTED - NOT PASSED" : "NOT ATTEMPTED");
+    return [String(x.i), x.t.title, status];
+  });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(20);
+  doc.text("Practice Challenge Results", marginX, 60);
+
+  doc.autoTable({
+    startY: 64,
+    head: [["#", "Challenge", "Status"]],
+    body: practiceRows,
+    theme: "grid",
+    styles: { fontSize: 8.5, cellPadding: 2.5 },
+    headStyles: { fillColor: [22, 78, 99], textColor: 255, fontStyle: "bold" },
+    columnStyles: { 0:{cellWidth:8}, 1:{cellWidth:100}, 2:{cellWidth:56} },
+    didParseCell: function(data){
+      if (data.section === "body" && data.column.index === 2){
+        const v = data.cell.raw;
+        if (v === "PASSED") data.cell.styles.textColor = [22, 163, 74];
+        else if (v === "NOT ATTEMPTED") data.cell.styles.textColor = [150, 150, 150];
+        else data.cell.styles.textColor = [220, 38, 38];
+      }
+    }
+  });
+
+  let y = doc.lastAutoTable.finalY + 8;
+  const practicePct = gradableTasks.length ? Math.round(passedCount / gradableTasks.length * 100) : 0;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.5);
+  doc.setTextColor(20);
+  doc.text(`Practice Score: ${passedCount} / ${gradableTasks.length} challenges passed  (${practicePct}%)`, marginX, y);
+  y += 10;
+
+  /* ---- Quiz results ---- */
+  doc.setFontSize(11);
+  doc.text("Quiz Results", marginX, y);
+  y += 4;
+
+  if (!quizSubmitted){
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(150);
+    doc.text("The quiz was not submitted before this report was generated.", marginX, y + 6);
+    y += 14;
+  } else {
+    const quizRows = quizResults.map((r, i) => [
+      String(i + 1), r.question, r.yourAnswer, r.correctAnswer, r.isCorrect ? "Correct" : "Incorrect"
+    ]);
+    doc.autoTable({
+      startY: y + 2,
+      head: [["#", "Question", "Your Answer", "Correct Answer", "Result"]],
+      body: quizRows,
+      theme: "grid",
+      styles: { fontSize: 7.5, cellPadding: 2, overflow: "linebreak" },
+      headStyles: { fillColor: [22, 78, 99], textColor: 255, fontStyle: "bold" },
+      columnStyles: { 0:{cellWidth:7}, 1:{cellWidth:78}, 2:{cellWidth:34}, 3:{cellWidth:34}, 4:{cellWidth:18} },
+      didParseCell: function(data){
+        if (data.section === "body" && data.column.index === 4){
+          data.cell.styles.textColor = data.cell.raw === "Correct" ? [22, 163, 74] : [220, 38, 38];
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+    const qPct = Math.round(quizScore / QUIZ.length * 100);
+    const remark = qPct >= 80 ? "Excellent understanding of the while loop."
+                 : qPct >= 50 ? "Satisfactory — review the explanations for missed questions."
+                 : "Needs improvement — revisit Topic 11 in the Learn tab.";
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(20);
+    doc.text(`Quiz Score: ${quizScore} / ${QUIZ.length}  (${qPct}%) — ${remark}`, marginX, y);
+    y += 10;
+  }
+
+  /* ---- Overall summary ---- */
+  if (y > 260) { doc.addPage(); y = 20; }
+  doc.setDrawColor(34, 211, 238);
+  doc.line(marginX, y, pageWidth - marginX, y);
+  y += 8;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(20);
+  doc.text("Overall Summary", marginX, y);
+  y += 7;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text(`Practice Challenges: ${passedCount} / ${gradableTasks.length} passed (${practicePct}%)`, marginX, y);
+  y += 6;
+  doc.text(`Quiz: ${quizSubmitted ? quizScore + " / " + QUIZ.length + " (" + Math.round(quizScore/QUIZ.length*100) + "%)" : "Not submitted"}`, marginX, y);
+
+  /* ---- Footer on every page ---- */
+  const pageCount = doc.internal.getNumberOfPages();
+  const credit = _sigText();
+  for (let p = 1; p <= pageCount; p++){
+    doc.setPage(p);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(150);
+    doc.text(credit, marginX, 290);
+    doc.text(`Page ${p} of ${pageCount}`, pageWidth - marginX, 290, { align: "right" });
+  }
+
+  const safeName = (studentName || "student").replace(/[^a-z0-9]+/gi, "_");
+  const safeClass = (studentClass || "class").replace(/[^a-z0-9]+/gi, "_");
+  doc.save(`Results_Topic11_${safeName}_${safeClass}.pdf`);
+}
+
+$("btn-download-pdf").addEventListener("click", generatePDF);
 
 /* ============ BOOT ================================================== */
 if (!verifySignature()) lockApp();
