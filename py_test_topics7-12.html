@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PY//TEST — Checkpoint Lab: Topics 7–12</title>
+
+<!-- ============================================================
+     CDN libraries — no backend required
+     - CodeMirror 5    : Python editor for the practice challenges
+     - Pyodide         : CPython in WebAssembly, runs code client-side
+     - jsPDF           : generates the downloadable results PDF
+     - jsPDF-AutoTable : formats the PDF result tables
+     ============================================================ -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   DESIGN TOKENS — matches the PY//LAB / PY//LEARN FUI theme
+   ================================================================ */
+:root{
+  --bg:         #0b0f19;
+  --bg-panel:   rgba(13, 20, 36, .82);
+  --grid-line:  rgba(60, 130, 210, .07);
+  --cyan:       #22d3ee;
+  --cyan-dim:   rgba(34, 211, 238, .35);
+  --cyan-faint: rgba(34, 211, 238, .12);
+  --text:       #dbe7f4;
+  --text-dim:   #7e93ad;
+  --red:        #fb4d5c;
+  --red-dim:    rgba(251, 77, 92, .35);
+  --green:      #34d399;
+  --green-dim:  rgba(52, 211, 153, .35);
+  --amber:      #fbbf24;
+  --font-ui:    'Chakra Petch', sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+  --radius:     6px;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; overflow:hidden; }
+body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -5%, rgba(34,211,238,.06), transparent 70%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:100% 100%, 42px 42px, 42px 42px;
+  color:var(--text);
+  font-family:var(--font-ui);
+}
+
+/* ---------------- Start gate (collects name + class) ---------------- */
+#gate{
+  position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(ellipse 70% 50% at 50% 20%, rgba(34,211,238,.08), transparent 70%), var(--bg);
+  padding:20px;
+}
+#gate-card{
+  position:relative; width:100%; max-width:440px;
+  background:var(--bg-panel); border:1px solid var(--cyan-dim); border-radius:8px;
+  box-shadow:0 0 40px -10px var(--cyan-dim); padding:34px 32px;
+}
+#gate-card::before, #gate-card::after{ content:""; position:absolute; width:18px; height:18px; pointer-events:none; }
+#gate-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
+#gate-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
+#gate-card h1{ font-size:1.1rem; letter-spacing:.18em; color:var(--cyan); text-shadow:0 0 12px var(--cyan-dim); margin-bottom:4px; }
+#gate-card .sub{ font-size:.72rem; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; margin-bottom:22px; }
+#gate-card label{ display:block; font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 6px; }
+#gate-card input{
+  width:100%; padding:11px 12px; font-family:var(--font-ui); font-size:.9rem;
+  background:rgba(5,9,18,.6); border:1px solid rgba(34,211,238,.3); border-radius:5px; color:var(--text);
+}
+#gate-card input:focus{ outline:2px solid var(--cyan); outline-offset:1px; }
+#gate-error{ color:var(--red); font-size:.75rem; margin-top:10px; display:none; }
+#gate-card button{
+  width:100%; margin-top:22px; padding:12px; font-family:var(--font-ui); font-size:.85rem;
+  letter-spacing:.14em; text-transform:uppercase; font-weight:700; cursor:pointer;
+  color:#04141a; background:linear-gradient(180deg,#67e8f9,var(--cyan)); border:1px solid var(--cyan);
+  border-radius:5px; box-shadow:0 0 16px -2px var(--cyan-dim);
+}
+#gate-card button:hover{ box-shadow:0 0 22px 0 var(--cyan-dim); }
+#gate-card .note{ font-size:.7rem; color:var(--text-dim); line-height:1.6; margin-top:18px; border-top:1px dashed rgba(34,211,238,.2); padding-top:14px; }
+
+/* ---------------- Main app (hidden until gate passed) ---------------- */
+#main-app.hidden{ display:none; }
+.app{ display:flex; flex-direction:column; height:100vh; width:100vw; padding:12px; gap:12px; }
+header{
+  flex:0 0 auto; display:flex; align-items:center; gap:12px; padding:8px 16px;
+  background:var(--bg-panel); border:1px solid var(--cyan-dim); border-radius:var(--radius);
+  box-shadow:0 0 18px -6px var(--cyan-dim), inset 0 0 24px -18px var(--cyan);
+  flex-wrap:wrap;
+}
+.brand{ font-weight:700; font-size:1rem; letter-spacing:.2em; color:var(--cyan); text-shadow:0 0 12px var(--cyan-dim); white-space:nowrap; }
+.brand small{ color:var(--text-dim); letter-spacing:.12em; font-weight:500; }
+#student-badge{
+  font-size:.68rem; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase;
+  border-left:1px solid rgba(34,211,238,.25); padding-left:12px; white-space:nowrap;
+}
+#student-badge b{ color:var(--cyan); font-weight:600; }
+.status{ display:flex; align-items:center; gap:8px; font-size:.7rem; letter-spacing:.14em;
+  color:var(--text-dim); text-transform:uppercase; white-space:nowrap; }
+.status .dot{ width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 8px var(--amber); animation:pulse 1.2s infinite; }
+.status.ready .dot{ background:var(--green); box-shadow:0 0 8px var(--green); animation:none; }
+.status.running .dot{ background:var(--cyan); box-shadow:0 0 10px var(--cyan); animation:pulse .7s infinite; }
+@keyframes pulse{ 50%{ opacity:.35; } }
+.spacer{ flex:1; }
+
+.mode-tabs{ display:flex; gap:6px; }
+.mode-tab{
+  font-family:var(--font-ui); font-size:.78rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--text-dim); cursor:pointer; background:rgba(34,211,238,.05);
+  border:1px solid rgba(34,211,238,.2); border-radius:var(--radius); padding:8px 18px;
+  transition:all .15s;
+}
+.mode-tab:hover{ color:var(--text); background:var(--cyan-faint); }
+.mode-tab.active{
+  color:#04141a; font-weight:700; background:linear-gradient(180deg,#67e8f9,var(--cyan));
+  border-color:var(--cyan); box-shadow:0 0 16px -2px var(--cyan-dim);
+}
+#btn-download-pdf{
+  color:#04140c; font-weight:700; background:linear-gradient(180deg,#6ee7b7,var(--green));
+  border-color:var(--green); box-shadow:0 0 14px -2px var(--green-dim);
+}
+#btn-download-pdf:hover{ box-shadow:0 0 20px 0 var(--green-dim); }
+
+button{
+  font-family:var(--font-ui); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+  cursor:pointer; color:var(--text); background:rgba(34,211,238,.06);
+  border:1px solid var(--cyan-dim); border-radius:var(--radius); padding:7px 14px;
+  transition:box-shadow .15s, background .15s, transform .05s; white-space:nowrap;
+}
+button:hover{ background:var(--cyan-faint); box-shadow:0 0 12px -2px var(--cyan-dim); }
+button:active{ transform:translateY(1px); }
+button:disabled{ opacity:.4; cursor:not-allowed; box-shadow:none; }
+button.primary{
+  color:#04141a; font-weight:700; background:linear-gradient(180deg,#67e8f9,var(--cyan));
+  border-color:var(--cyan); box-shadow:0 0 14px -2px var(--cyan-dim);
+}
+
+.stage{ flex:1; min-height:0; display:none; gap:12px; }
+.stage.active{ display:flex; }
+
+.panel{
+  position:relative; background:var(--bg-panel); border:1px solid var(--cyan-dim);
+  border-radius:var(--radius); box-shadow:0 0 18px -8px var(--cyan-dim);
+  display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden;
+}
+.panel::before, .panel::after{ content:""; position:absolute; width:14px; height:14px; pointer-events:none; z-index:3; }
+.panel::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
+.panel::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
+.panel-head{
+  display:flex; align-items:center; gap:10px; padding:8px 14px; flex:0 0 auto;
+  font-size:.7rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--cyan);
+  border-bottom:1px solid rgba(34,211,238,.18);
+  background:linear-gradient(90deg, var(--cyan-faint), transparent 60%);
+}
+.panel-body{ flex:1; min-height:0; overflow-y:auto; padding:16px; }
+
+.callout{
+  border-left:3px solid var(--amber); background:rgba(251,191,36,.06);
+  padding:10px 14px; margin:0 0 14px; font-size:.84rem; line-height:1.6; max-width:800px; border-radius:0 5px 5px 0;
+}
+.callout code{ font-family:var(--font-mono); font-size:.82em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.callout.green{ border-left-color:var(--green); background:rgba(52,211,153,.07); }
+
+/* PRACTICE */
+.task-nav{ flex:0 0 260px; }
+.task-nav .panel-body{ padding:10px; }
+.nav-topic{ font-size:.62rem; letter-spacing:.16em; color:var(--text-dim); text-transform:uppercase; margin:12px 6px 6px; }
+.task-item{ display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:4px; border-radius:5px; cursor:pointer;
+  font-size:.8rem; color:var(--text-dim); border:1px solid transparent; transition:all .15s; }
+.task-item:hover{ color:var(--text); background:var(--cyan-faint); }
+.task-item.active{ color:var(--cyan); background:var(--cyan-faint); border-color:var(--cyan-dim); text-shadow:0 0 8px var(--cyan-dim); }
+.task-item .tick{ color:var(--green); font-size:.8rem; visibility:hidden; }
+.task-item.done .tick{ visibility:visible; text-shadow:0 0 8px var(--green-dim); }
+
+.practice-main{ flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; }
+.practice-top{ flex:0 0 auto; max-height:34%; }
+.practice-top .panel-body{ padding:14px 18px; }
+.practice-top h3{ font-size:.95rem; color:var(--cyan); margin-bottom:6px; letter-spacing:.05em; }
+.practice-top p, .practice-top li{ font-size:.85rem; line-height:1.6; margin-bottom:8px; }
+.practice-top ul{ margin-left:18px; }
+.practice-top code{ font-family:var(--font-mono); font-size:.8em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.expected{
+  font-family:var(--font-mono); font-size:.8rem; line-height:1.55; white-space:pre;
+  border:1px dashed var(--cyan-dim); border-radius:5px; padding:8px 12px;
+  background:rgba(5,9,18,.5); overflow-x:auto; max-width:640px; max-height:140px; overflow-y:auto;
+}
+.practice-editor{ flex:1.4; min-height:140px; }
+.practice-editor .panel-body{ padding:0; overflow:hidden; display:flex; }
+.practice-editor .panel-head .btns{ margin-left:auto; display:flex; gap:6px; }
+.CodeMirror{
+  height:100%; flex:1; background:rgba(5,9,18,.6); color:var(--text);
+  font-family:var(--font-mono); font-size:.85rem; line-height:1.6;
+}
+.CodeMirror-gutters{ background:rgba(5,9,18,.85); border-right:1px solid rgba(34,211,238,.18); }
+.CodeMirror-linenumber{ color:#3c4f66; }
+.CodeMirror-cursor{ border-left:2px solid var(--cyan); }
+.CodeMirror-selected{ background:rgba(34,211,238,.15) !important; }
+.cm-s-default .cm-keyword{ color:#7dd3fc; } .cm-s-default .cm-builtin{ color:#67e8f9; }
+.cm-s-default .cm-string{ color:#86efac; } .cm-s-default .cm-number{ color:#fbbf24; }
+.cm-s-default .cm-comment{ color:#5b7089; font-style:italic; } .cm-s-default .cm-operator{ color:#c4b5fd; }
+
+.practice-result{ flex:1; min-height:110px; }
+.practice-result .panel-body{ font-family:var(--font-mono); font-size:.8rem; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.practice-result .placeholder{ color:var(--text-dim); font-style:italic; }
+.verdict{ font-family:var(--font-ui); font-weight:700; letter-spacing:.1em; padding:6px 10px; border-radius:5px; display:inline-block; margin-bottom:10px; }
+.verdict.pass{ color:var(--green); border:1px solid var(--green-dim); background:rgba(52,211,153,.08); text-shadow:0 0 10px var(--green-dim); }
+.verdict.fail{ color:var(--red); border:1px solid var(--red-dim); background:rgba(251,77,92,.07); }
+.diff-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:760px; margin-top:6px; }
+.diff-box{ border:1px solid rgba(34,211,238,.2); border-radius:5px; padding:8px 10px; background:rgba(5,9,18,.5); white-space:pre; overflow-x:auto; max-height:220px; overflow-y:auto; }
+.diff-box.bad{ border-color:var(--red-dim); }
+.diff-box .lbl{ font-size:.6rem; letter-spacing:.14em; color:var(--text-dim); display:block; margin-bottom:4px; }
+.err-text{ color:#ffb3ba; }
+.hint-text{ color:var(--amber); }
+
+#practice-progress-wrap{ padding:10px 10px 4px; }
+#practice-progress-track{ height:6px; border-radius:4px; background:rgba(34,211,238,.1); overflow:hidden; }
+#practice-progress-bar{ height:100%; background:linear-gradient(90deg,#67e8f9,var(--cyan)); width:0%; transition:width .3s; }
+#practice-progress-label{ font-size:.62rem; letter-spacing:.12em; color:var(--text-dim); margin-top:5px; text-transform:uppercase; }
+
+/* QUIZ */
+#stage-quiz .panel{ flex:1; }
+#stage-quiz .panel-body{ padding:20px 26px; }
+.quiz-topic-head{ font-size:.68rem; letter-spacing:.2em; color:var(--cyan); text-transform:uppercase; margin:22px 0 10px; border-bottom:1px solid rgba(34,211,238,.2); padding-bottom:6px; max-width:860px; }
+.quiz-topic-head:first-child{ margin-top:0; }
+.quiz-q{ border:1px solid rgba(34,211,238,.2); border-radius:var(--radius); background:rgba(5,9,18,.45); padding:14px 18px; margin-bottom:14px; max-width:860px; }
+.quiz-q .q-text{ font-size:.9rem; line-height:1.6; margin-bottom:10px; }
+.quiz-q .q-text code, .quiz-q label code{ font-family:var(--font-mono); font-size:.82em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.quiz-q .q-num{ color:var(--cyan); font-weight:700; margin-right:6px; }
+.quiz-q label{
+  display:block; font-size:.85rem; padding:7px 12px; margin-bottom:6px; cursor:pointer;
+  border:1px solid rgba(34,211,238,.15); border-radius:5px; transition:all .12s; line-height:1.5;
+}
+.quiz-q label:hover{ background:var(--cyan-faint); }
+.quiz-q input{ accent-color:var(--cyan); margin-right:9px; }
+.quiz-q.graded label{ cursor:default; }
+.quiz-q label.correct{ border-color:var(--green); background:rgba(52,211,153,.1); box-shadow:0 0 10px -4px var(--green-dim); }
+.quiz-q label.wrong{ border-color:var(--red); background:rgba(251,77,92,.08); }
+.quiz-q .explain{ display:none; font-size:.8rem; color:var(--text-dim); border-top:1px dashed rgba(34,211,238,.2); margin-top:8px; padding-top:8px; line-height:1.6; }
+.quiz-q.graded .explain{ display:block; }
+#quiz-score{
+  display:none; font-size:1rem; font-weight:700; letter-spacing:.1em;
+  border:1px solid var(--cyan-dim); border-radius:var(--radius); padding:12px 18px;
+  margin-bottom:16px; max-width:860px; background:var(--cyan-faint);
+}
+#quiz-score.great{ color:var(--green); border-color:var(--green-dim); background:rgba(52,211,153,.08); }
+#quiz-score.ok{ color:var(--amber); }
+#quiz-score.poor{ color:var(--red); border-color:var(--red-dim); }
+
+::-webkit-scrollbar{ width:9px; height:9px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:rgba(34,211,238,.25); border-radius:5px; }
+::-webkit-scrollbar-thumb:hover{ background:rgba(34,211,238,.45); }
+
+@media (max-width:900px){
+  html,body{ overflow:auto; }
+  .app{ height:auto; }
+  .stage.active{ flex-direction:column; }
+  .task-nav{ flex:0 0 auto; }
+  .practice-top{ max-height:none; }
+  .practice-editor{ min-height:260px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= START GATE — collects name & class ================= -->
+<div id="gate">
+  <div id="gate-card">
+    <h1>PY//TEST · CHECKPOINT</h1>
+    <div class="sub">Topics 7–12 · Operators to Functions</div>
+
+    <label for="gate-name">Student Name</label>
+    <input id="gate-name" type="text" autocomplete="off" placeholder="e.g. Tan Wei Ming" maxlength="60">
+
+    <label for="gate-class">Class</label>
+    <input id="gate-class" type="text" autocomplete="off" placeholder="e.g. ICT2026" maxlength="30">
+
+    <div id="gate-error">Please enter both your name and class to begin.</div>
+    <button id="btn-gate-start">Begin Checkpoint</button>
+
+    <div class="note">Your name and class are printed on the results PDF you download at the end — they are not sent anywhere or stored online.</div>
+  </div>
+</div>
+
+<!-- ================= MAIN APP (hidden until gate passed) ================= -->
+<div id="main-app" class="hidden">
+<div class="app">
+
+  <!-- ================= HEADER ================= -->
+  <header>
+    <div class="brand">PY//TEST <small>· CHECKPOINT · TOPICS 7–12</small></div>
+    <div id="student-badge"></div>
+    <div class="status" id="status"><span class="dot"></span><span id="status-text">Booting Python runtime…</span></div>
+    <div class="spacer"></div>
+    <nav class="mode-tabs" role="tablist">
+      <button class="mode-tab active" data-mode="practice" role="tab">⌨ Practice</button>
+      <button class="mode-tab" data-mode="quiz" role="tab">✔ Quiz</button>
+    </nav>
+    <button id="btn-download-pdf">⬇ Download Results PDF</button>
+  </header>
+
+  <!-- ================= PRACTICE ================= -->
+  <div class="stage active" id="stage-practice">
+    <aside class="panel task-nav">
+      <div class="panel-head">Checkpoint Tasks</div>
+      <div id="practice-progress-wrap">
+        <div id="practice-progress-track"><div id="practice-progress-bar"></div></div>
+        <div id="practice-progress-label">0 / 0 completed</div>
+      </div>
+      <div class="panel-body" id="task-nav-list"></div>
+    </aside>
+    <div class="practice-main">
+      <section class="panel practice-top">
+        <div class="panel-head">Task Brief</div>
+        <div class="panel-body" id="task-brief"></div>
+      </section>
+      <section class="panel practice-editor">
+        <div class="panel-head">Your Code
+          <span class="btns">
+            <button id="btn-task-run">▶ Run</button>
+            <button id="btn-task-check" class="primary">✔ Check My Code</button>
+            <button id="btn-task-reset">Reset</button>
+          </span>
+        </div>
+        <div class="panel-body"><textarea id="task-code"></textarea></div>
+      </section>
+      <section class="panel practice-result">
+        <div class="panel-head">Result</div>
+        <div class="panel-body" id="task-result"><span class="placeholder">Run your code, then press “Check My Code” to test it against the expected output.</span></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= QUIZ ================= -->
+  <div class="stage" id="stage-quiz">
+    <main class="panel">
+      <div class="panel-head">Checkpoint Quiz — Topics 7–12
+        <span style="margin-left:auto;display:flex;gap:8px;">
+          <button id="btn-quiz-submit" class="primary">Submit Answers</button>
+          <button id="btn-quiz-retry">Try Again</button>
+        </span>
+      </div>
+      <div class="panel-body">
+        <div id="quiz-score"></div>
+        <div id="quiz-list"></div>
+      </div>
+    </main>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ====================================================================
+   PY//TEST — Topics 7–12 checkpoint with graded PDF export (vanilla JS)
+   §0 Signature   — integrity-protected developer credit
+   §1 Gate        — collects student name & class before unlocking the app
+   §2 Runtime     — Pyodide boot + runSnippet(): stdout/err capture
+   §3 PRACTICE    — challenges, CodeMirror, output/code checking
+   §4 QUIZ        — MCQ data, grading, explanations
+   §5 PDF export  — jsPDF + autoTable compile a graded results report
+   ==================================================================== */
+
+/* ============ §0 APPLICATION SIGNATURE (integrity-protected) ======== */
+const _SIG_F = ["RGV2ZWxvcGVkIGJ5IA==", "UmFqZXNoIFIgTW9oYW4=", "IGZvciBJVEUgQ1c="];
+const _SIG_H = 3332075197;
+function _sigText(){ try{ return _SIG_F.map(f => atob(f)).join(""); }catch(e){ return ""; } }
+function _sigHash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h * 33) + s.charCodeAt(i)) >>> 0; return h; }
+function verifySignature(){ return _sigHash(_sigText()) === _SIG_H; }
+function lockApp(){
+  document.body.innerHTML =
+    '<div style="height:100vh;display:flex;align-items:center;justify-content:center;font-family:monospace;color:#fb4d5c;background:#0b0f19;text-align:center;padding:20px;">' +
+    '⛔ INTEGRITY CHECK FAILED<br><br>The application signature has been modified.<br>Restore the original file to continue.</div>';
+  throw new Error("signature integrity failure");
+}
+if (!verifySignature()) lockApp();
+
+const $ = id => document.getElementById(id);
+function esc(s){ const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+/* Strip HTML tags down to plain text — used when writing quiz question/option
+   text (which may contain <code> or <br>) into the PDF, since jsPDF only
+   accepts plain strings. */
+function stripHtml(html){
+  const d = document.createElement("div");
+  d.innerHTML = html.replace(/<br\s*\/?>/gi, " ");
+  return (d.textContent || d.innerText || "").replace(/\s+/g, " ").trim();
+}
+
+/* ============ §1 START GATE ========================================= */
+let studentName = "", studentClass = "";
+
+function trySubmitGate(){
+  const name = $("gate-name").value.trim();
+  const cls  = $("gate-class").value.trim();
+  if (!name || !cls){
+    $("gate-error").style.display = "block";
+    return;
+  }
+  studentName = name;
+  studentClass = cls;
+  $("student-badge").innerHTML = `Student: <b>${esc(studentName)}</b> &nbsp;·&nbsp; Class: <b>${esc(studentClass)}</b>`;
+  $("gate").remove();
+  $("main-app").classList.remove("hidden");
+  taskEditor.refresh();
+}
+$("btn-gate-start").addEventListener("click", trySubmitGate);
+$("gate-class").addEventListener("keydown", e => { if (e.key === "Enter") trySubmitGate(); });
+$("gate-name").addEventListener("keydown", e => { if (e.key === "Enter") $("gate-class").focus(); });
+
+/* ============ §2 PYTHON RUNTIME ===================================== */
+let pyodide = null;
+
+function setStatus(mode, text){
+  const el = $("status");
+  el.classList.remove("ready", "running");
+  if (mode) el.classList.add(mode);
+  $("status-text").textContent = text;
+}
+
+async function bootPyodide(){
+  try{
+    pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/" });
+    pyodide.runPython(`
+import builtins, js
+def _browser_input(prompt_text=""):
+    result = js.window.prompt(str(prompt_text))
+    if result is None:
+        raise EOFError("input() was cancelled by the user")
+    print(str(prompt_text) + result)
+    return result
+builtins.input = _browser_input
+`);
+    setStatus("ready", "Python 3.11 ready");
+  }catch(err){
+    setStatus("", "Runtime failed to load — check internet & reload");
+  }
+}
+
+async function runSnippet(code){
+  if (!pyodide) return { out:"", err:"Python runtime is still loading — try again in a moment." };
+  let out = "", err = "";
+  pyodide.setStdout({ batched: t => { out += t + "\n"; } });
+  pyodide.setStderr({ batched: t => { err += t + "\n"; } });
+  setStatus("running", "Executing…");
+  try{
+    await pyodide.runPythonAsync(code);
+  }catch(e){
+    err += (e.message || String(e));
+  }finally{
+    setStatus("ready", "Python 3.11 ready");
+  }
+  return { out, err };
+}
+
+/* ============ §3 PRACTICE MODE ======================================
+   Challenge types:
+   • expected: "…"  → output compared line-by-line (normalised)
+   • checkCode:true → no fixed output; passes when error-free AND
+     mustContain source rules are satisfied.
+   Every starter is written so that, run unmodified, it either
+   completes normally or raises an immediate error — never hangs.    */
+const TASKS = [
+  { title:"Overview", topic:"Start here", expected:null,
+    brief:`<h3>🧪 Checkpoint Lab — Topics 7 to 12</h3>
+<p>This lab tests <b>Operators</b>, <b>Decision Making</b>, <b>Lists</b>, the <b>For Loop</b>, the <b>While Loop</b>, and <b>Functions</b>. Work through the tasks in the sidebar in any order — each is checked automatically.</p>
+<p>When you're done, use the <b>⬇ Download Results PDF</b> button in the header to save a graded report with your name, class, practice results, and quiz score.</p>
+<div class="callout green">💡 Complete the Quiz tab before downloading for a fully graded report — if you download before submitting the quiz, that section will simply show as "not yet submitted".</div>
+<p>Use this panel (Sandbox) to warm up freely — it isn't graded.</p>`,
+    starter:`# Warm-up sandbox — not graded. Try anything from Topics 7-12.
+print("Ready to start the checkpoint!")` },
+
+  { title:"1 · Operator precedence", topic:"Topic 7 · Operators",
+    brief:`<h3>Task 1 — precedence and binding</h3>
+<p>Print the results of these two expressions, one per line, exactly as written (Python's own precedence rules decide the answer — remember <code>**</code> binds right-to-left):</p>
+<p><code>2 ** 3 ** 2</code> &nbsp; and &nbsp; <code>10 - 4 + 3</code></p>`,
+    expected:`512
+9`,
+    starter:`# print 2 ** 3 ** 2, then 10 - 4 + 3:
+`,
+    mustContain:[ { re:/2\s*\*\*\s*3\s*\*\*\s*2/, msg:"Include the expression 2 ** 3 ** 2." },
+                  { re:/10\s*-\s*4\s*\+\s*3/, msg:"Include the expression 10 - 4 + 3." } ] },
+
+  { title:"2 · Comparisons", topic:"Topic 7 · Operators",
+    brief:`<h3>Task 2 — comparison operators</h3>
+<p>With <code>a = 15</code> and <code>b = 10</code>, print the results of <code>a &gt; b</code>, <code>a == b</code>, and <code>a != b</code>, one per line.</p>`,
+    expected:`True
+False
+True`,
+    starter:`a = 15
+b = 10
+# print a > b, a == b, a != b:
+`,
+    mustContain:[ { re:/>/, msg:"Use the > operator." }, { re:/==/, msg:"Use the == operator." }, { re:/!=/, msg:"Use the != operator." } ] },
+
+  { title:"3 · Even or odd", topic:"Topic 8 · Decision Making",
+    brief:`<h3>Task 3 — if..else</h3>
+<p>Assign <code>num = 17</code>. Use an <code>if..else</code> statement with the modulus operator to print <b>"Odd Number"</b> or <b>"Even Number"</b>.</p>`,
+    expected:`Odd Number`,
+    starter:`num = 17
+# if..else using num % 2:
+`,
+    mustContain:[ { re:/if\s/, msg:"Use an if statement." }, { re:/else\s*:/, msg:"Include an else branch." }, { re:/%\s*2/, msg:"Test with num % 2." } ] },
+
+  { title:"4 · Grade classifier", topic:"Topic 8 · Decision Making",
+    brief:`<h3>Task 4 — if..elif..else</h3>
+<p>Assign <code>score = 72</code>. Using <code>if..elif..else</code>, print <b>"Grade: A"</b> if score &gt;= 80, <b>"Grade: B"</b> if score &gt;= 60, otherwise <b>"Grade: C"</b>.</p>`,
+    expected:`Grade: B`,
+    starter:`score = 72
+# if..elif..else classifying the grade:
+`,
+    mustContain:[ { re:/elif\s/, msg:"Use an elif branch." }, { re:/else\s*:/, msg:"Include an else branch." } ] },
+
+  { title:"5 · List slicing", topic:"Topic 9 · Lists",
+    brief:`<h3>Task 5 — indexing and slicing</h3>
+<p>Given <code>nums = [10, 20, 30, 40, 50, 60]</code>, print the middle four items using a <b>slice</b>, then print the <b>last</b> item using a negative index.</p>`,
+    expected:`[20, 30, 40, 50]
+60`,
+    starter:`nums = [10, 20, 30, 40, 50, 60]
+# print a slice for the middle four items, then nums[-1]:
+`,
+    mustContain:[ { re:/:/, msg:"Use the : slicing operator." }, { re:/-1/, msg:"Use a negative index for the last item." } ] },
+
+  { title:"6 · List operations", topic:"Topic 9 · Lists",
+    brief:`<h3>Task 6 — insert, append, delete</h3>
+<p>Start with <code>lst = [5, 10, 15]</code>. <b>Append</b> 20, then <b>insert</b> 0 at the very front (index 0), then <b>delete the last element</b>. Print the final list.</p>`,
+    expected:`[0, 5, 10, 15]`,
+    starter:`lst = [5, 10, 15]
+# append 20, insert 0 at the front, delete the last element, print lst:
+`,
+    mustContain:[ { re:/\.append\s*\(/, msg:"Use .append()." }, { re:/\.insert\s*\(/, msg:"Use .insert()." }, { re:/del\s|\.pop\s*\(/, msg:"Use del or .pop() to remove the last element." } ] },
+
+  { title:"7 · Sum of squares", topic:"Topic 10 · For Loop",
+    brief:`<h3>Task 7 — for + range()</h3>
+<p>Use a <code>for</code> loop with <code>range()</code> to add up the <b>squares</b> of 1 to 5 (1²+2²+3²+4²+5² = 55) and print the total.</p>`,
+    expected:`55`,
+    starter:`total = 0
+# for loop using range(1, 6), adding val*val each time:
+print(total)`,
+    mustContain:[ { re:/for\s+\w+\s+in\s+range\s*\(\s*1\s*,\s*6\s*\)/, msg:"Use for val in range(1, 6):." },
+                  { re:/\*\s*\w+|val\s*\*\*\s*2/, msg:"Square each value inside the loop." } ] },
+
+  { title:"8 · Multiplication row", topic:"Topic 10 · For Loop",
+    brief:`<h3>Task 8 — formatted for loop</h3>
+<p>Use a <code>for</code> loop with <code>range(1, 6)</code> to print the 6-times table row, in this exact format:</p>`,
+    expected:`6 x 1 = 6
+6 x 2 = 12
+6 x 3 = 18
+6 x 4 = 24
+6 x 5 = 30`,
+    starter:`# for j in range(1, 6): print "6 x j = 6*j"
+`,
+    mustContain:[ { re:/for\s+\w+\s+in\s+range\s*\(\s*1\s*,\s*6\s*\)/, msg:"Use for j in range(1, 6):." } ] },
+
+  { title:"9 · While accumulator", topic:"Topic 11 · While Loop",
+    brief:`<h3>Task 9 — while loop sum</h3>
+<p>Use a <code>while</code> loop to add up the numbers 1 through 6 (inclusive), then print the total. Remember: your loop needs an increment to avoid running forever!</p>`,
+    expected:`21`,
+    starter:`num = 1
+total = 0
+# while loop: add num to total, increment num, until num > 6
+print(total)`,
+    mustContain:[ { re:/while\s/, msg:"Use a while loop." },
+                  { re:/total\s*=\s*total\s*\+\s*num|total\s*\+=\s*num/, msg:"Accumulate num into total." },
+                  { re:/num\s*=\s*num\s*\+\s*1|num\s*\+=\s*1/, msg:"Increment num inside the loop." } ] },
+
+  { title:"10 · while..else", topic:"Topic 11 · While Loop",
+    brief:`<h3>Task 10 — countdown with else</h3>
+<p>Starting at <code>num = 4</code>, use a <code>while</code> loop to count down and print each number while <code>num &gt; 0</code>, decrementing each pass. Add an <code>else</code> block that prints <b>"Countdown complete"</b> once the loop finishes.</p>`,
+    expected:`4
+3
+2
+1
+Countdown complete`,
+    starter:`num = 4
+# while num > 0: print num, decrement; else: print "Countdown complete"
+`,
+    mustContain:[ { re:/while\s+num\s*>\s*0\s*:/, msg:"Use while num > 0: for the loop line." },
+                  { re:/else\s*:/, msg:"Include an else: block." } ] },
+
+  { title:"11 · Function with return", topic:"Topic 12 · Functions",
+    brief:`<h3>Task 11 — define and call</h3>
+<p>Write a function <code>cube(n)</code> that returns <code>n</code> raised to the power 3. Call <code>cube(4)</code> and print the result.</p>`,
+    expected:`64`,
+    starter:`# define cube(n), then call cube(4) and print the result:
+`,
+    mustContain:[ { re:/def\s+cube\s*\(/, msg:"Define a function named cube()." },
+                  { re:/return\s/, msg:"Use return to send back the result." },
+                  { re:/cube\s*\(\s*4\s*\)/, msg:"Call cube(4)." } ] },
+
+  { title:"12 · Default argument", topic:"Topic 12 · Functions",
+    brief:`<h3>Task 12 — function with a default parameter</h3>
+<p>Write a function <code>greet(name, msg="Welcome")</code> that returns <code>msg + ", " + name + "!"</code>. Call it twice: <code>greet("Amy")</code> (using the default) and <code>greet("Ben", "Hi")</code>. Print both results.</p>`,
+    expected:`Welcome, Amy!
+Hi, Ben!`,
+    starter:`# define greet(name, msg="Welcome"), then call it twice as described:
+`,
+    mustContain:[ { re:/def\s+greet\s*\(\s*name\s*,\s*msg\s*=/, msg:"Give msg a default value in the function definition." },
+                  { re:/greet\s*\(\s*["']Amy["']\s*\)/, msg:'Call greet("Amy") using the default message.' } ] }
+];
+
+let activeTask = 0;
+const taskState = TASKS.map(t => ({ code:t.starter, done:false, attempted:false }));
+
+const taskEditor = CodeMirror.fromTextArea($("task-code"), {
+  mode:"python", lineNumbers:true, indentUnit:4, smartIndent:true,
+  matchBrackets:true, viewportMargin:Infinity
+});
+
+function updateProgress(){
+  const gradable = TASKS.filter(t => t.expected !== null || t.checkCode);
+  const done = TASKS.reduce((n, t, i) => n + (taskState[i].done ? 1 : 0), 0);
+  const pct = gradable.length ? Math.round(done / gradable.length * 100) : 0;
+  $("practice-progress-bar").style.width = pct + "%";
+  $("practice-progress-label").textContent = `${done} / ${gradable.length} completed`;
+}
+
+function renderTaskNav(){
+  const list = $("task-nav-list");
+  list.innerHTML = "";
+  let lastTopic = "";
+  TASKS.forEach((t, i) => {
+    if (t.topic !== lastTopic){
+      lastTopic = t.topic;
+      const h = document.createElement("div");
+      h.className = "nav-topic"; h.textContent = t.topic;
+      list.appendChild(h);
+    }
+    const item = document.createElement("div");
+    item.className = "task-item" + (i === activeTask ? " active" : "") + (taskState[i].done ? " done" : "");
+    item.innerHTML = `<span class="tick">✔</span><span>${t.title}</span>`;
+    item.addEventListener("click", () => selectTask(i));
+    list.appendChild(item);
+  });
+  updateProgress();
+}
+
+function selectTask(i){
+  taskState[activeTask].code = taskEditor.getValue();
+  activeTask = i;
+  const t = TASKS[i];
+  $("task-brief").innerHTML = t.brief +
+    (t.expected !== null
+      ? `<div style="font-size:.68rem;letter-spacing:.14em;color:var(--text-dim);margin:6px 0 4px;">EXPECTED OUTPUT</div><div class="expected">${esc(t.expected)}</div>`
+      : "");
+  taskEditor.setValue(taskState[i].code);
+  $("task-result").innerHTML = `<span class="placeholder">Run your code, then press “Check My Code” to test it against the expected output.</span>`;
+  renderTaskNav();
+  taskEditor.focus();
+}
+
+function normalise(text){
+  const lines = text.replace(/\r/g, "").split("\n").map(l => l.replace(/\s+$/,""));
+  while (lines.length && lines[lines.length-1] === "") lines.pop();
+  return lines.join("\n");
+}
+
+async function runTask(check){
+  if (!verifySignature()) return lockApp();
+  taskState[activeTask].code = taskEditor.getValue();
+  const t = TASKS[activeTask];
+  const res = $("task-result");
+  const r = await runSnippet(taskEditor.getValue());
+  if (check && (t.expected !== null || t.checkCode)) taskState[activeTask].attempted = true;
+
+  if (!check || (t.expected === null && !t.checkCode)){
+    res.innerHTML =
+      (r.out ? esc(r.out) : "") +
+      (r.err ? `<div class="err-text">${esc(r.err)}</div>` : "") +
+      (!r.out && !r.err ? `<span class="placeholder">(no output)</span>` : "");
+    return;
+  }
+
+  let html = "";
+  if (r.err){
+    html += `<div class="verdict fail">✘ NOT YET — your program has an error</div>\n<div class="err-text">${esc(r.err)}</div>`;
+    res.innerHTML = html; return;
+  }
+
+  const src = taskEditor.getValue();
+  const misses = (t.mustContain || []).filter(rule => !rule.re.test(src)).map(rule => rule.msg);
+
+  if (t.checkCode){
+    if (misses.length === 0){
+      taskState[activeTask].done = true;
+      renderTaskNav();
+      html += `<div class="verdict pass">✔ PASSED — program runs and uses the required structure!</div>\n${esc(r.out)}`;
+    } else {
+      html += `<div class="verdict fail">✘ NOT YET — keep trying</div><div class="hint-text">Hint: ${misses.map(esc).join(" ")}</div>\n${esc(r.out)}`;
+    }
+    res.innerHTML = html; return;
+  }
+
+  const got = normalise(r.out);
+  const want = normalise(t.expected);
+  const outputOK = got === want;
+
+  if (outputOK && misses.length === 0){
+    taskState[activeTask].done = true;
+    renderTaskNav();
+    html += `<div class="verdict pass">✔ PASSED — well done!</div>\n${esc(got)}`;
+  } else {
+    html += `<div class="verdict fail">✘ NOT YET — keep trying</div>`;
+    if (misses.length) html += `<div class="hint-text">Hint: ${misses.map(esc).join(" ")}</div>`;
+    if (!outputOK){
+      html += `<div class="diff-grid">
+        <div class="diff-box"><span class="lbl">EXPECTED</span>${esc(want)}</div>
+        <div class="diff-box bad"><span class="lbl">YOUR OUTPUT</span>${got ? esc(got) : "<i>(no output)</i>"}</div>
+      </div>`;
+    } else {
+      html += `\n${esc(got)}`;
+    }
+  }
+  res.innerHTML = html;
+}
+
+$("btn-task-run").addEventListener("click", () => runTask(false));
+$("btn-task-check").addEventListener("click", () => runTask(true));
+$("btn-task-reset").addEventListener("click", () => {
+  if (!confirm("Reset this task to its starter code?")) return;
+  taskEditor.setValue(TASKS[activeTask].starter);
+  taskState[activeTask].code = TASKS[activeTask].starter;
+});
+
+/* ============ §4 QUIZ MODE ==========================================
+   24 questions, grouped by topic (4 each for Topics 7-12). Results
+   are captured into quizResults[] during grading so the PDF export
+   can reproduce a full per-question breakdown.                       */
+const QUIZ = [
+  // ---- Topic 7 · Operators ----
+  { topic:"Topic 7 · Operators", q:`What is the result of <code>2 ** 3 ** 2</code>?`,
+    opts:[`64`, `36`, `512`, `256`],
+    a:2, ex:`** binds right-to-left: 3**2=9 first, then 2**9=512.` },
+  { topic:"Topic 7 · Operators", q:`What does the <code>//</code> operator do?`,
+    opts:[`Comments out a line`, `Floor (whole-number) division`, `Exponentiation`, `Modulus`],
+    a:1, ex:`// performs floor division, keeping only the whole-number quotient and discarding the remainder.` },
+  { topic:"Topic 7 · Operators", q:`What is the result of <code>4 + 2 * 3</code>?`,
+    opts:[`18`, `10`, `9`, `14`],
+    a:1, ex:`Multiplication has higher priority than addition: 2*3=6 first, then 4+6=10.` },
+  { topic:"Topic 7 · Operators", q:`Which operator checks whether two variables refer to the exact same object in memory?`,
+    opts:[`==`, `is`, `in`, `!=`],
+    a:1, ex:`is is the identity operator — it checks memory identity, not just equal values.` },
+
+  // ---- Topic 8 · Decision Making ----
+  { topic:"Topic 8 · Decision Making", q:`What character must end an <code>if condition</code> line?`,
+    opts:[`A semicolon ;`, `A colon :`, `A full stop .`, `Nothing`],
+    a:1, ex:`The colon introduces the indented block that runs when the condition is true.` },
+  { topic:"Topic 8 · Decision Making", q:`In an if..elif..else chain, how many else blocks are allowed?`,
+    opts:[`As many as needed`, `Two`, `Only one`, `None`],
+    a:2, ex:`Multiple elif blocks are allowed, but only one else block — and only one branch ever executes.` },
+  { topic:"Topic 8 · Decision Making", q:`What does this print?<br><code>num = 10<br>if num &gt; 0:<br>&nbsp;&nbsp;print("positive")<br>else:<br>&nbsp;&nbsp;print("non-positive")</code>`,
+    opts:[`positive`, `non-positive`, `Nothing`, `An error`],
+    a:0, ex:`10 > 0 is True, so the if branch runs, printing "positive".` },
+  { topic:"Topic 8 · Decision Making", q:`What is a "nested if" statement?`,
+    opts:[`Two if statements side by side`, `An if statement inside another if statement`, `An if with no condition`, `An if inside a for loop only`],
+    a:1, ex:`Nesting means placing one if (or if..else) statement inside the body of another.` },
+
+  // ---- Topic 9 · Lists ----
+  { topic:"Topic 9 · Lists", q:`What is the index of the first item in a Python list?`,
+    opts:[`1`, `0`, `-1`, `It varies`],
+    a:1, ex:`Python list indexing starts at 0.` },
+  { topic:"Topic 9 · Lists", q:`What does the index <code>-1</code> refer to in a list?`,
+    opts:[`The first item`, `An invalid index`, `The last item`, `An empty list`],
+    a:2, ex:`Negative indexing counts from the end — -1 is always the last item.` },
+  { topic:"Topic 9 · Lists", q:`Which method adds a single item to the END of a list?`,
+    opts:[`insert()`, `extend()`, `append()`, `add()`],
+    a:2, ex:`append() adds exactly one item to the end of the list.` },
+  { topic:"Topic 9 · Lists", q:`Given <code>n = [1,2,3,4,5]</code>, what does <code>n[1:3]</code> return?`,
+    opts:[`[1, 2, 3]`, `[2, 3]`, `[2, 3, 4]`, `[1, 2]`],
+    a:1, ex:`Slicing includes the start index (1) but excludes the end index (3): items at index 1 and 2.` },
+
+  // ---- Topic 10 · For Loop ----
+  { topic:"Topic 10 · For Loop", q:`What does <code>range(5)</code> generate?`,
+    opts:[`[1,2,3,4,5]`, `[0,1,2,3,4]`, `[0,1,2,3,4,5]`, `[5]`],
+    a:1, ex:`range(n) generates whole numbers from 0 up to (n-1).` },
+  { topic:"Topic 10 · For Loop", q:`When does a for loop's else block execute?`,
+    opts:[`Every iteration`, `Only if the loop body never runs`, `Only after the loop completes all its iterations normally`, `Never`],
+    a:2, ex:`The else block runs once, automatically, right after the loop finishes normally.` },
+  { topic:"Topic 10 · For Loop", q:`How many total lines does this print?<br><code>for a in range(2):<br>&nbsp;&nbsp;for b in range(3):<br>&nbsp;&nbsp;&nbsp;&nbsp;print(a,b)</code>`,
+    opts:[`2`, `3`, `5`, `6`],
+    a:3, ex:`The inner loop (3 values) runs completely for each of the 2 outer values: 2 × 3 = 6.` },
+  { topic:"Topic 10 · For Loop", q:`Can a for loop iterate directly over a string?`,
+    opts:[`No, never`, `Yes — a string is a sequence of characters`, `Only with range()`, `Only single-character strings`],
+    a:1, ex:`Strings are sequences too — for ch in "abc": gives each character in turn.` },
+
+  // ---- Topic 11 · While Loop ----
+  { topic:"Topic 11 · While Loop", q:`A while loop keeps repeating as long as its condition is…`,
+    opts:[`False`, `True`, `Zero`, `None of these`],
+    a:1, ex:`The loop body keeps running while the condition evaluates to True; it stops the moment it becomes False.` },
+  { topic:"Topic 11 · While Loop", q:`What is the most common cause of an infinite while loop?`,
+    opts:[`Using print() inside the loop`, `The condition never becomes false because nothing updates it`, `Having an else block`, `Using range()`],
+    a:1, ex:`Without an increment/decrement that eventually changes the condition's truth value, the loop never ends.` },
+  { topic:"Topic 11 · While Loop", q:`When does a while loop's else block run?`,
+    opts:[`Before the loop starts`, `Only after the loop finishes execution normally`, `Every time the condition is checked`, `Only if an error occurs`],
+    a:1, ex:`Just like the for loop, the while loop's else block runs once, after the condition finally becomes false.` },
+  { topic:"Topic 11 · While Loop", q:`When should you prefer a while loop over a for loop?`,
+    opts:[`When you know exactly how many times to loop`, `When you are NOT certain how many times the loop needs to run`, `Never — for is always better`, `Only for looping over lists`],
+    a:1, ex:`for suits a known number of repetitions; while suits "keep going until this condition changes" situations.` },
+
+  // ---- Topic 12 · Functions ----
+  { topic:"Topic 12 · Functions", q:`Which keyword defines a function in Python?`,
+    opts:[`function`, `def`, `func`, `define`],
+    a:1, ex:`Function definitions start with the def keyword, followed by the function's name.` },
+  { topic:"Topic 12 · Functions", q:`What does the return statement do?`,
+    opts:[`Prints a value to the console`, `Sends a value back to the code that called the function`, `Ends the entire program`, `Is required in every function`],
+    a:1, ex:`return sends a value back to the caller — it's optional, since some functions just perform an action instead.` },
+  { topic:"Topic 12 · Functions", q:`What is a "default argument"?`,
+    opts:[`A value used automatically if the caller doesn't supply that argument`, `The first argument in every function`, `An argument that can't be changed`, `A built-in function`],
+    a:0, ex:`A default argument supplies a fallback value, used only when the caller omits that argument.` },
+  { topic:"Topic 12 · Functions", q:`Which of these is a BUILT-IN function rather than user-defined?`,
+    opts:[`cube()`, `greet()`, `print()`, `wishes()`],
+    a:2, ex:`print() is predefined in Python — we never need to declare it before using it.` }
+];
+
+let quizSubmitted = false;
+let quizResults = [];   // filled during grading, used by the PDF export
+let quizScore = 0;
+
+function renderQuiz(){
+  const list = $("quiz-list");
+  list.innerHTML = "";
+  let lastTopic = "";
+  QUIZ.forEach((item, qi) => {
+    if (item.topic !== lastTopic){
+      lastTopic = item.topic;
+      const h = document.createElement("div");
+      h.className = "quiz-topic-head";
+      h.textContent = item.topic;
+      list.appendChild(h);
+    }
+    const box = document.createElement("div");
+    box.className = "quiz-q";
+    box.dataset.q = qi;
+    let inner = `<div class="q-text"><span class="q-num">Q${qi + 1}.</span>${item.q}</div>`;
+    item.opts.forEach((opt, oi) => {
+      inner += `<label><input type="radio" name="q${qi}" value="${oi}"><code>${esc(opt)}</code></label>`;
+    });
+    inner += `<div class="explain">💡 ${item.ex}</div>`;
+    box.innerHTML = inner;
+    list.appendChild(box);
+  });
+  $("quiz-score").style.display = "none";
+  $("btn-quiz-submit").disabled = false;
+  quizSubmitted = false;
+  quizResults = [];
+}
+
+function gradeQuiz(){
+  if (!verifySignature()) return lockApp();
+  let score = 0, answered = 0;
+  const results = [];
+  document.querySelectorAll(".quiz-q").forEach(box => {
+    const qi = +box.dataset.q;
+    const chosen = box.querySelector("input:checked");
+    if (chosen) answered++;
+    box.classList.add("graded");
+    box.querySelectorAll("label").forEach((lab, oi) => {
+      const input = lab.querySelector("input");
+      input.disabled = true;
+      if (oi === QUIZ[qi].a) lab.classList.add("correct");
+      else if (chosen && +chosen.value === oi) lab.classList.add("wrong");
+    });
+    const isCorrect = chosen && +chosen.value === QUIZ[qi].a;
+    if (isCorrect) score++;
+    results.push({
+      topic: QUIZ[qi].topic,
+      question: stripHtml(QUIZ[qi].q),
+      yourAnswer: chosen ? stripHtml(QUIZ[qi].opts[+chosen.value]) : "(not answered)",
+      correctAnswer: stripHtml(QUIZ[qi].opts[QUIZ[qi].a]),
+      isCorrect: !!isCorrect
+    });
+  });
+  if (answered < QUIZ.length &&
+      !confirm(`You have answered ${answered} of ${QUIZ.length} questions. Unanswered questions count as wrong — submit anyway?\n\n(Press Cancel, then Try Again to keep answering.)`)){
+    renderQuiz(); return;
+  }
+  quizResults = results;
+  quizScore = score;
+  quizSubmitted = true;
+  const pct = Math.round(score / QUIZ.length * 100);
+  const scoreEl = $("quiz-score");
+  scoreEl.className = pct >= 80 ? "great" : pct >= 50 ? "ok" : "poor";
+  scoreEl.id = "quiz-score";
+  scoreEl.style.display = "block";
+  scoreEl.textContent =
+    `SCORE: ${score} / ${QUIZ.length} (${pct}%) — ` +
+    (pct >= 80 ? "Excellent! You're ready to move on. 🏆"
+     : pct >= 50 ? "Good effort — review the explanations below, then try again."
+     : "Revisit Topics 7–12 in PY//LEARN, then come back and try again.");
+  $("btn-quiz-submit").disabled = true;
+  scoreEl.scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+$("btn-quiz-submit").addEventListener("click", gradeQuiz);
+$("btn-quiz-retry").addEventListener("click", renderQuiz);
+
+/* ============ MODE SWITCHING ======================================== */
+function switchMode(mode){
+  document.querySelectorAll(".mode-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.mode === mode));
+  document.querySelectorAll(".stage").forEach(s => s.classList.remove("active"));
+  $("stage-" + mode).classList.add("active");
+  if (mode === "practice") taskEditor.refresh();
+}
+document.querySelectorAll(".mode-tab").forEach(tab =>
+  tab.addEventListener("click", () => switchMode(tab.dataset.mode)));
+
+/* ============ §5 PDF EXPORT =========================================
+   Builds a graded results report client-side with jsPDF + AutoTable:
+     • Student name, class, date
+     • Practice task table (topic, task, status)
+     • Practice completion score
+     • Quiz per-question breakdown (topic, question, your answer,
+       correct answer, result) — or a note if not yet submitted
+     • Overall quiz score with a short remark
+     • Footer credit + page numbers                                  */
+function generatePDF(){
+  if (!verifySignature()) return lockApp();
+  taskState[activeTask].code = taskEditor.getValue();
+
+  const anyPracticeAttempted = taskState.slice(1).some(s => s.attempted);
+  if (!anyPracticeAttempted && !quizSubmitted){
+    if (!confirm("You haven't attempted any practice tasks or submitted the quiz yet. Download an (empty) results PDF anyway?")) return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 14;
+
+  /* ---- Header ---- */
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(8, 120, 150);
+  doc.text("ITE College West — School of Electronics & Info-Comm Technology", marginX, 18);
+  doc.setFontSize(12);
+  doc.text("Basic Python Programming — Checkpoint Results (Topics 7–12)", marginX, 26);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(40);
+  doc.text(`Student Name: ${studentName}`, marginX, 36);
+  doc.text(`Class: ${studentClass}`, marginX, 42);
+  doc.text(`Date: ${new Date().toLocaleString()}`, marginX, 48);
+  doc.setDrawColor(34, 211, 238);
+  doc.line(marginX, 52, pageWidth - marginX, 52);
+
+  /* ---- Practice results table ---- */
+  const gradableTasks = TASKS.map((t, i) => ({ t, i })).filter(x => x.t.expected !== null || x.t.checkCode);
+  const passedCount = gradableTasks.filter(x => taskState[x.i].done).length;
+  const practiceRows = gradableTasks.map(x => {
+    const st = taskState[x.i];
+    const status = st.done ? "PASSED" : (st.attempted ? "ATTEMPTED - NOT PASSED" : "NOT ATTEMPTED");
+    return [String(x.i), x.t.topic.replace(/^Topic \d+ · /, ""), x.t.title.replace(/^\d+\s*·\s*/, ""), status];
+  });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(20);
+  doc.text("Practice Task Results", marginX, 60);
+
+  doc.autoTable({
+    startY: 64,
+    head: [["#", "Topic", "Task", "Status"]],
+    body: practiceRows,
+    theme: "grid",
+    styles: { fontSize: 8.5, cellPadding: 2.5 },
+    headStyles: { fillColor: [22, 78, 99], textColor: 255, fontStyle: "bold" },
+    columnStyles: { 0:{cellWidth:8}, 1:{cellWidth:32}, 2:{cellWidth:70}, 3:{cellWidth:44} },
+    didParseCell: function(data){
+      if (data.section === "body" && data.column.index === 3){
+        const v = data.cell.raw;
+        if (v === "PASSED") data.cell.styles.textColor = [22, 163, 74];
+        else if (v === "NOT ATTEMPTED") data.cell.styles.textColor = [150, 150, 150];
+        else data.cell.styles.textColor = [220, 38, 38];
+      }
+    }
+  });
+
+  let y = doc.lastAutoTable.finalY + 8;
+  const practicePct = gradableTasks.length ? Math.round(passedCount / gradableTasks.length * 100) : 0;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.5);
+  doc.setTextColor(20);
+  doc.text(`Practice Score: ${passedCount} / ${gradableTasks.length} tasks passed  (${practicePct}%)`, marginX, y);
+  y += 10;
+
+  /* ---- Quiz results ---- */
+  doc.setFontSize(11);
+  doc.text("Quiz Results", marginX, y);
+  y += 4;
+
+  if (!quizSubmitted){
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(150);
+    doc.text("The quiz was not submitted before this report was generated.", marginX, y + 6);
+    y += 14;
+  } else {
+    const quizRows = quizResults.map((r, i) => [
+      String(i + 1),
+      r.topic.replace(/^Topic \d+ · /, ""),
+      r.question,
+      r.yourAnswer,
+      r.correctAnswer,
+      r.isCorrect ? "Correct" : "Incorrect"
+    ]);
+    doc.autoTable({
+      startY: y + 2,
+      head: [["#", "Topic", "Question", "Your Answer", "Correct Answer", "Result"]],
+      body: quizRows,
+      theme: "grid",
+      styles: { fontSize: 7.5, cellPadding: 2, overflow: "linebreak" },
+      headStyles: { fillColor: [22, 78, 99], textColor: 255, fontStyle: "bold" },
+      columnStyles: {
+        0:{cellWidth:7}, 1:{cellWidth:22}, 2:{cellWidth:62},
+        3:{cellWidth:32}, 4:{cellWidth:32}, 5:{cellWidth:18}
+      },
+      didParseCell: function(data){
+        if (data.section === "body" && data.column.index === 5){
+          data.cell.styles.textColor = data.cell.raw === "Correct" ? [22, 163, 74] : [220, 38, 38];
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+    const qPct = Math.round(quizScore / QUIZ.length * 100);
+    const remark = qPct >= 80 ? "Excellent understanding of Topics 7-12."
+                 : qPct >= 50 ? "Satisfactory — review the weaker topics above."
+                 : "Needs improvement — revisit Topics 7-12 in PY//LEARN.";
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(20);
+    doc.text(`Quiz Score: ${quizScore} / ${QUIZ.length}  (${qPct}%) — ${remark}`, marginX, y);
+    y += 10;
+  }
+
+  /* ---- Overall summary ---- */
+  if (y > 260) { doc.addPage(); y = 20; }
+  doc.setDrawColor(34, 211, 238);
+  doc.line(marginX, y, pageWidth - marginX, y);
+  y += 8;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(20);
+  doc.text("Overall Summary", marginX, y);
+  y += 7;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text(`Practice Tasks: ${passedCount} / ${gradableTasks.length} passed (${practicePct}%)`, marginX, y);
+  y += 6;
+  doc.text(`Quiz: ${quizSubmitted ? quizScore + " / " + QUIZ.length + " (" + Math.round(quizScore/QUIZ.length*100) + "%)" : "Not submitted"}`, marginX, y);
+
+  /* ---- Footer on every page ---- */
+  const pageCount = doc.internal.getNumberOfPages();
+  const credit = _sigText();
+  for (let p = 1; p <= pageCount; p++){
+    doc.setPage(p);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(150);
+    doc.text(credit, marginX, 290);
+    doc.text(`Page ${p} of ${pageCount}`, pageWidth - marginX, 290, { align: "right" });
+  }
+
+  const safeName = (studentName || "student").replace(/[^a-z0-9]+/gi, "_");
+  const safeClass = (studentClass || "class").replace(/[^a-z0-9]+/gi, "_");
+  doc.save(`Checkpoint_Topics7-12_${safeName}_${safeClass}.pdf`);
+}
+
+$("btn-download-pdf").addEventListener("click", generatePDF);
+
+/* ============ BOOT ================================================== */
+(function mountCredit(){
+  const credit = _sigText();
+  console.log("%c" + credit, "color:#22d3ee;font-weight:bold;");
+  new MutationObserver(() => { if (!verifySignature()) lockApp(); })
+    .observe(document.body, { childList:true, subtree:true });
+})();
+
+renderTaskNav();
+selectTask(0);
+renderQuiz();
+bootPyodide();
+$("gate-name").focus();
+</script>
+</body>
+</html>

@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PY//TEST — Checkpoint Lab: Topics 2–6</title>
+
+<!-- ============================================================
+     CDN libraries — no backend required
+     - CodeMirror 5    : Python editor for the practice challenges
+     - Pyodide         : CPython in WebAssembly, runs code client-side
+     - jsPDF           : generates the downloadable results PDF
+     - jsPDF-AutoTable : formats the PDF result tables
+     ============================================================ -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   DESIGN TOKENS — matches the PY//LAB / PY//LEARN FUI theme
+   ================================================================ */
+:root{
+  --bg:         #0b0f19;
+  --bg-panel:   rgba(13, 20, 36, .82);
+  --grid-line:  rgba(60, 130, 210, .07);
+  --cyan:       #22d3ee;
+  --cyan-dim:   rgba(34, 211, 238, .35);
+  --cyan-faint: rgba(34, 211, 238, .12);
+  --text:       #dbe7f4;
+  --text-dim:   #7e93ad;
+  --red:        #fb4d5c;
+  --red-dim:    rgba(251, 77, 92, .35);
+  --green:      #34d399;
+  --green-dim:  rgba(52, 211, 153, .35);
+  --amber:      #fbbf24;
+  --font-ui:    'Chakra Petch', sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+  --radius:     6px;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; overflow:hidden; }
+body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -5%, rgba(34,211,238,.06), transparent 70%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:100% 100%, 42px 42px, 42px 42px;
+  color:var(--text);
+  font-family:var(--font-ui);
+}
+
+/* ---------------- Start gate (collects name + class) ---------------- */
+#gate{
+  position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(ellipse 70% 50% at 50% 20%, rgba(34,211,238,.08), transparent 70%), var(--bg);
+  padding:20px;
+}
+#gate-card{
+  position:relative; width:100%; max-width:440px;
+  background:var(--bg-panel); border:1px solid var(--cyan-dim); border-radius:8px;
+  box-shadow:0 0 40px -10px var(--cyan-dim); padding:34px 32px;
+}
+#gate-card::before, #gate-card::after{ content:""; position:absolute; width:18px; height:18px; pointer-events:none; }
+#gate-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
+#gate-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
+#gate-card h1{ font-size:1.1rem; letter-spacing:.18em; color:var(--cyan); text-shadow:0 0 12px var(--cyan-dim); margin-bottom:4px; }
+#gate-card .sub{ font-size:.72rem; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; margin-bottom:22px; }
+#gate-card label{ display:block; font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 6px; }
+#gate-card input{
+  width:100%; padding:11px 12px; font-family:var(--font-ui); font-size:.9rem;
+  background:rgba(5,9,18,.6); border:1px solid rgba(34,211,238,.3); border-radius:5px; color:var(--text);
+}
+#gate-card input:focus{ outline:2px solid var(--cyan); outline-offset:1px; }
+#gate-error{ color:var(--red); font-size:.75rem; margin-top:10px; display:none; }
+#gate-card button{
+  width:100%; margin-top:22px; padding:12px; font-family:var(--font-ui); font-size:.85rem;
+  letter-spacing:.14em; text-transform:uppercase; font-weight:700; cursor:pointer;
+  color:#04141a; background:linear-gradient(180deg,#67e8f9,var(--cyan)); border:1px solid var(--cyan);
+  border-radius:5px; box-shadow:0 0 16px -2px var(--cyan-dim);
+}
+#gate-card button:hover{ box-shadow:0 0 22px 0 var(--cyan-dim); }
+#gate-card .note{ font-size:.7rem; color:var(--text-dim); line-height:1.6; margin-top:18px; border-top:1px dashed rgba(34,211,238,.2); padding-top:14px; }
+
+/* ---------------- Main app (hidden until gate passed) ---------------- */
+#main-app.hidden{ display:none; }
+.app{ display:flex; flex-direction:column; height:100vh; width:100vw; padding:12px; gap:12px; }
+header{
+  flex:0 0 auto; display:flex; align-items:center; gap:12px; padding:8px 16px;
+  background:var(--bg-panel); border:1px solid var(--cyan-dim); border-radius:var(--radius);
+  box-shadow:0 0 18px -6px var(--cyan-dim), inset 0 0 24px -18px var(--cyan);
+  flex-wrap:wrap;
+}
+.brand{ font-weight:700; font-size:1rem; letter-spacing:.2em; color:var(--cyan); text-shadow:0 0 12px var(--cyan-dim); white-space:nowrap; }
+.brand small{ color:var(--text-dim); letter-spacing:.12em; font-weight:500; }
+#student-badge{
+  font-size:.68rem; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase;
+  border-left:1px solid rgba(34,211,238,.25); padding-left:12px; white-space:nowrap;
+}
+#student-badge b{ color:var(--cyan); font-weight:600; }
+.status{ display:flex; align-items:center; gap:8px; font-size:.7rem; letter-spacing:.14em;
+  color:var(--text-dim); text-transform:uppercase; white-space:nowrap; }
+.status .dot{ width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 8px var(--amber); animation:pulse 1.2s infinite; }
+.status.ready .dot{ background:var(--green); box-shadow:0 0 8px var(--green); animation:none; }
+.status.running .dot{ background:var(--cyan); box-shadow:0 0 10px var(--cyan); animation:pulse .7s infinite; }
+@keyframes pulse{ 50%{ opacity:.35; } }
+.spacer{ flex:1; }
+
+.mode-tabs{ display:flex; gap:6px; }
+.mode-tab{
+  font-family:var(--font-ui); font-size:.78rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--text-dim); cursor:pointer; background:rgba(34,211,238,.05);
+  border:1px solid rgba(34,211,238,.2); border-radius:var(--radius); padding:8px 18px;
+  transition:all .15s;
+}
+.mode-tab:hover{ color:var(--text); background:var(--cyan-faint); }
+.mode-tab.active{
+  color:#04141a; font-weight:700; background:linear-gradient(180deg,#67e8f9,var(--cyan));
+  border-color:var(--cyan); box-shadow:0 0 16px -2px var(--cyan-dim);
+}
+#btn-download-pdf{
+  color:#04140c; font-weight:700; background:linear-gradient(180deg,#6ee7b7,var(--green));
+  border-color:var(--green); box-shadow:0 0 14px -2px var(--green-dim);
+}
+#btn-download-pdf:hover{ box-shadow:0 0 20px 0 var(--green-dim); }
+
+button{
+  font-family:var(--font-ui); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+  cursor:pointer; color:var(--text); background:rgba(34,211,238,.06);
+  border:1px solid var(--cyan-dim); border-radius:var(--radius); padding:7px 14px;
+  transition:box-shadow .15s, background .15s, transform .05s; white-space:nowrap;
+}
+button:hover{ background:var(--cyan-faint); box-shadow:0 0 12px -2px var(--cyan-dim); }
+button:active{ transform:translateY(1px); }
+button:disabled{ opacity:.4; cursor:not-allowed; box-shadow:none; }
+button.primary{
+  color:#04141a; font-weight:700; background:linear-gradient(180deg,#67e8f9,var(--cyan));
+  border-color:var(--cyan); box-shadow:0 0 14px -2px var(--cyan-dim);
+}
+
+.stage{ flex:1; min-height:0; display:none; gap:12px; }
+.stage.active{ display:flex; }
+
+.panel{
+  position:relative; background:var(--bg-panel); border:1px solid var(--cyan-dim);
+  border-radius:var(--radius); box-shadow:0 0 18px -8px var(--cyan-dim);
+  display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden;
+}
+.panel::before, .panel::after{ content:""; position:absolute; width:14px; height:14px; pointer-events:none; z-index:3; }
+.panel::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
+.panel::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
+.panel-head{
+  display:flex; align-items:center; gap:10px; padding:8px 14px; flex:0 0 auto;
+  font-size:.7rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--cyan);
+  border-bottom:1px solid rgba(34,211,238,.18);
+  background:linear-gradient(90deg, var(--cyan-faint), transparent 60%);
+}
+.panel-body{ flex:1; min-height:0; overflow-y:auto; padding:16px; }
+
+.callout{
+  border-left:3px solid var(--amber); background:rgba(251,191,36,.06);
+  padding:10px 14px; margin:0 0 14px; font-size:.84rem; line-height:1.6; max-width:800px; border-radius:0 5px 5px 0;
+}
+.callout code{ font-family:var(--font-mono); font-size:.82em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.callout.green{ border-left-color:var(--green); background:rgba(52,211,153,.07); }
+
+/* PRACTICE */
+.task-nav{ flex:0 0 260px; }
+.task-nav .panel-body{ padding:10px; }
+.nav-topic{ font-size:.62rem; letter-spacing:.16em; color:var(--text-dim); text-transform:uppercase; margin:12px 6px 6px; }
+.task-item{ display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:4px; border-radius:5px; cursor:pointer;
+  font-size:.8rem; color:var(--text-dim); border:1px solid transparent; transition:all .15s; }
+.task-item:hover{ color:var(--text); background:var(--cyan-faint); }
+.task-item.active{ color:var(--cyan); background:var(--cyan-faint); border-color:var(--cyan-dim); text-shadow:0 0 8px var(--cyan-dim); }
+.task-item .tick{ color:var(--green); font-size:.8rem; visibility:hidden; }
+.task-item.done .tick{ visibility:visible; text-shadow:0 0 8px var(--green-dim); }
+
+.practice-main{ flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; }
+.practice-top{ flex:0 0 auto; max-height:34%; }
+.practice-top .panel-body{ padding:14px 18px; }
+.practice-top h3{ font-size:.95rem; color:var(--cyan); margin-bottom:6px; letter-spacing:.05em; }
+.practice-top p, .practice-top li{ font-size:.85rem; line-height:1.6; margin-bottom:8px; }
+.practice-top ul{ margin-left:18px; }
+.practice-top code{ font-family:var(--font-mono); font-size:.8em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.expected{
+  font-family:var(--font-mono); font-size:.8rem; line-height:1.55; white-space:pre;
+  border:1px dashed var(--cyan-dim); border-radius:5px; padding:8px 12px;
+  background:rgba(5,9,18,.5); overflow-x:auto; max-width:640px; max-height:140px; overflow-y:auto;
+}
+.practice-editor{ flex:1.4; min-height:140px; }
+.practice-editor .panel-body{ padding:0; overflow:hidden; display:flex; }
+.practice-editor .panel-head .btns{ margin-left:auto; display:flex; gap:6px; }
+.CodeMirror{
+  height:100%; flex:1; background:rgba(5,9,18,.6); color:var(--text);
+  font-family:var(--font-mono); font-size:.85rem; line-height:1.6;
+}
+.CodeMirror-gutters{ background:rgba(5,9,18,.85); border-right:1px solid rgba(34,211,238,.18); }
+.CodeMirror-linenumber{ color:#3c4f66; }
+.CodeMirror-cursor{ border-left:2px solid var(--cyan); }
+.CodeMirror-selected{ background:rgba(34,211,238,.15) !important; }
+.cm-s-default .cm-keyword{ color:#7dd3fc; } .cm-s-default .cm-builtin{ color:#67e8f9; }
+.cm-s-default .cm-string{ color:#86efac; } .cm-s-default .cm-number{ color:#fbbf24; }
+.cm-s-default .cm-comment{ color:#5b7089; font-style:italic; } .cm-s-default .cm-operator{ color:#c4b5fd; }
+
+.practice-result{ flex:1; min-height:110px; }
+.practice-result .panel-body{ font-family:var(--font-mono); font-size:.8rem; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.practice-result .placeholder{ color:var(--text-dim); font-style:italic; }
+.verdict{ font-family:var(--font-ui); font-weight:700; letter-spacing:.1em; padding:6px 10px; border-radius:5px; display:inline-block; margin-bottom:10px; }
+.verdict.pass{ color:var(--green); border:1px solid var(--green-dim); background:rgba(52,211,153,.08); text-shadow:0 0 10px var(--green-dim); }
+.verdict.fail{ color:var(--red); border:1px solid var(--red-dim); background:rgba(251,77,92,.07); }
+.diff-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:760px; margin-top:6px; }
+.diff-box{ border:1px solid rgba(34,211,238,.2); border-radius:5px; padding:8px 10px; background:rgba(5,9,18,.5); white-space:pre; overflow-x:auto; max-height:220px; overflow-y:auto; }
+.diff-box.bad{ border-color:var(--red-dim); }
+.diff-box .lbl{ font-size:.6rem; letter-spacing:.14em; color:var(--text-dim); display:block; margin-bottom:4px; }
+.err-text{ color:#ffb3ba; }
+.hint-text{ color:var(--amber); }
+
+#practice-progress-wrap{ padding:10px 10px 4px; }
+#practice-progress-track{ height:6px; border-radius:4px; background:rgba(34,211,238,.1); overflow:hidden; }
+#practice-progress-bar{ height:100%; background:linear-gradient(90deg,#67e8f9,var(--cyan)); width:0%; transition:width .3s; }
+#practice-progress-label{ font-size:.62rem; letter-spacing:.12em; color:var(--text-dim); margin-top:5px; text-transform:uppercase; }
+
+/* QUIZ */
+#stage-quiz .panel{ flex:1; }
+#stage-quiz .panel-body{ padding:20px 26px; }
+.quiz-topic-head{ font-size:.68rem; letter-spacing:.2em; color:var(--cyan); text-transform:uppercase; margin:22px 0 10px; border-bottom:1px solid rgba(34,211,238,.2); padding-bottom:6px; max-width:860px; }
+.quiz-topic-head:first-child{ margin-top:0; }
+.quiz-q{ border:1px solid rgba(34,211,238,.2); border-radius:var(--radius); background:rgba(5,9,18,.45); padding:14px 18px; margin-bottom:14px; max-width:860px; }
+.quiz-q .q-text{ font-size:.9rem; line-height:1.6; margin-bottom:10px; }
+.quiz-q .q-text code, .quiz-q label code{ font-family:var(--font-mono); font-size:.82em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.quiz-q .q-num{ color:var(--cyan); font-weight:700; margin-right:6px; }
+.quiz-q label{
+  display:block; font-size:.85rem; padding:7px 12px; margin-bottom:6px; cursor:pointer;
+  border:1px solid rgba(34,211,238,.15); border-radius:5px; transition:all .12s; line-height:1.5;
+}
+.quiz-q label:hover{ background:var(--cyan-faint); }
+.quiz-q input{ accent-color:var(--cyan); margin-right:9px; }
+.quiz-q.graded label{ cursor:default; }
+.quiz-q label.correct{ border-color:var(--green); background:rgba(52,211,153,.1); box-shadow:0 0 10px -4px var(--green-dim); }
+.quiz-q label.wrong{ border-color:var(--red); background:rgba(251,77,92,.08); }
+.quiz-q .explain{ display:none; font-size:.8rem; color:var(--text-dim); border-top:1px dashed rgba(34,211,238,.2); margin-top:8px; padding-top:8px; line-height:1.6; }
+.quiz-q.graded .explain{ display:block; }
+#quiz-score{
+  display:none; font-size:1rem; font-weight:700; letter-spacing:.1em;
+  border:1px solid var(--cyan-dim); border-radius:var(--radius); padding:12px 18px;
+  margin-bottom:16px; max-width:860px; background:var(--cyan-faint);
+}
+#quiz-score.great{ color:var(--green); border-color:var(--green-dim); background:rgba(52,211,153,.08); }
+#quiz-score.ok{ color:var(--amber); }
+#quiz-score.poor{ color:var(--red); border-color:var(--red-dim); }
+
+::-webkit-scrollbar{ width:9px; height:9px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:rgba(34,211,238,.25); border-radius:5px; }
+::-webkit-scrollbar-thumb:hover{ background:rgba(34,211,238,.45); }
+
+@media (max-width:900px){
+  html,body{ overflow:auto; }
+  .app{ height:auto; }
+  .stage.active{ flex-direction:column; }
+  .task-nav{ flex:0 0 auto; }
+  .practice-top{ max-height:none; }
+  .practice-editor{ min-height:260px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= START GATE — collects name & class ================= -->
+<div id="gate">
+  <div id="gate-card">
+    <h1>PY//TEST · CHECKPOINT</h1>
+    <div class="sub">Topics 2–6 · print() to Variables</div>
+
+    <label for="gate-name">Student Name</label>
+    <input id="gate-name" type="text" autocomplete="off" placeholder="e.g. Tan Wei Ming" maxlength="60">
+
+    <label for="gate-class">Class</label>
+    <input id="gate-class" type="text" autocomplete="off" placeholder="e.g. ICT2026" maxlength="30">
+
+    <div id="gate-error">Please enter both your name and class to begin.</div>
+    <button id="btn-gate-start">Begin Checkpoint</button>
+
+    <div class="note">Your name and class are printed on the results PDF you download at the end — they are not sent anywhere or stored online.</div>
+  </div>
+</div>
+
+<!-- ================= MAIN APP (hidden until gate passed) ================= -->
+<div id="main-app" class="hidden">
+<div class="app">
+
+  <!-- ================= HEADER ================= -->
+  <header>
+    <div class="brand">PY//TEST <small>· CHECKPOINT · TOPICS 2–6</small></div>
+    <div id="student-badge"></div>
+    <div class="status" id="status"><span class="dot"></span><span id="status-text">Booting Python runtime…</span></div>
+    <div class="spacer"></div>
+    <nav class="mode-tabs" role="tablist">
+      <button class="mode-tab active" data-mode="practice" role="tab">⌨ Practice</button>
+      <button class="mode-tab" data-mode="quiz" role="tab">✔ Quiz</button>
+    </nav>
+    <button id="btn-download-pdf">⬇ Download Results PDF</button>
+  </header>
+
+  <!-- ================= PRACTICE ================= -->
+  <div class="stage active" id="stage-practice">
+    <aside class="panel task-nav">
+      <div class="panel-head">Checkpoint Tasks</div>
+      <div id="practice-progress-wrap">
+        <div id="practice-progress-track"><div id="practice-progress-bar"></div></div>
+        <div id="practice-progress-label">0 / 0 completed</div>
+      </div>
+      <div class="panel-body" id="task-nav-list"></div>
+    </aside>
+    <div class="practice-main">
+      <section class="panel practice-top">
+        <div class="panel-head">Task Brief</div>
+        <div class="panel-body" id="task-brief"></div>
+      </section>
+      <section class="panel practice-editor">
+        <div class="panel-head">Your Code
+          <span class="btns">
+            <button id="btn-task-run">▶ Run</button>
+            <button id="btn-task-check" class="primary">✔ Check My Code</button>
+            <button id="btn-task-reset">Reset</button>
+          </span>
+        </div>
+        <div class="panel-body"><textarea id="task-code"></textarea></div>
+      </section>
+      <section class="panel practice-result">
+        <div class="panel-head">Result</div>
+        <div class="panel-body" id="task-result"><span class="placeholder">Run your code, then press “Check My Code” to test it against the expected output.</span></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= QUIZ ================= -->
+  <div class="stage" id="stage-quiz">
+    <main class="panel">
+      <div class="panel-head">Checkpoint Quiz — Topics 3–6
+        <span style="margin-left:auto;display:flex;gap:8px;">
+          <button id="btn-quiz-submit" class="primary">Submit Answers</button>
+          <button id="btn-quiz-retry">Try Again</button>
+        </span>
+      </div>
+      <div class="panel-body">
+        <div id="quiz-score"></div>
+        <div id="quiz-list"></div>
+      </div>
+    </main>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ====================================================================
+   PY//TEST — Topics 2–6 checkpoint with graded PDF export (vanilla JS)
+   §0 Signature   — integrity-protected developer credit
+   §1 Gate        — collects student name & class before unlocking the app
+   §2 Runtime     — Pyodide boot + runSnippet(): stdout/err capture
+   §3 PRACTICE    — challenges, CodeMirror, output/code checking
+   §4 QUIZ        — MCQ data, grading, explanations
+   §5 PDF export  — jsPDF + autoTable compile a graded results report
+
+   NOTE ON SCOPE: no source material for "Topic 2" has ever been
+   supplied, so this checkpoint covers Topics 3–6 (print()/comments,
+   literals, variables) — the earliest topics with available notes.
+   If Topic 2 content is provided later it can be folded in.
+   ==================================================================== */
+
+/* ============ §0 APPLICATION SIGNATURE (integrity-protected) ======== */
+const _SIG_F = ["RGV2ZWxvcGVkIGJ5IA==", "UmFqZXNoIFIgTW9oYW4=", "IGZvciBJVEUgQ1c="];
+const _SIG_H = 3332075197;
+function _sigText(){ try{ return _SIG_F.map(f => atob(f)).join(""); }catch(e){ return ""; } }
+function _sigHash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h * 33) + s.charCodeAt(i)) >>> 0; return h; }
+function verifySignature(){ return _sigHash(_sigText()) === _SIG_H; }
+function lockApp(){
+  document.body.innerHTML =
+    '<div style="height:100vh;display:flex;align-items:center;justify-content:center;font-family:monospace;color:#fb4d5c;background:#0b0f19;text-align:center;padding:20px;">' +
+    '⛔ INTEGRITY CHECK FAILED<br><br>The application signature has been modified.<br>Restore the original file to continue.</div>';
+  throw new Error("signature integrity failure");
+}
+if (!verifySignature()) lockApp();
+
+const $ = id => document.getElementById(id);
+function esc(s){ const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+/* Strip HTML tags down to plain text — used when writing quiz question/option
+   text (which may contain <code> or <br>) into the PDF, since jsPDF only
+   accepts plain strings. */
+function stripHtml(html){
+  const d = document.createElement("div");
+  d.innerHTML = html.replace(/<br\s*\/?>/gi, " ");
+  return (d.textContent || d.innerText || "").replace(/\s+/g, " ").trim();
+}
+
+/* ============ §1 START GATE ========================================= */
+let studentName = "", studentClass = "";
+
+function trySubmitGate(){
+  const name = $("gate-name").value.trim();
+  const cls  = $("gate-class").value.trim();
+  if (!name || !cls){
+    $("gate-error").style.display = "block";
+    return;
+  }
+  studentName = name;
+  studentClass = cls;
+  $("student-badge").innerHTML = `Student: <b>${esc(studentName)}</b> &nbsp;·&nbsp; Class: <b>${esc(studentClass)}</b>`;
+  $("gate").remove();
+  $("main-app").classList.remove("hidden");
+  taskEditor.refresh();
+}
+$("btn-gate-start").addEventListener("click", trySubmitGate);
+$("gate-class").addEventListener("keydown", e => { if (e.key === "Enter") trySubmitGate(); });
+$("gate-name").addEventListener("keydown", e => { if (e.key === "Enter") $("gate-class").focus(); });
+
+/* ============ §2 PYTHON RUNTIME ===================================== */
+let pyodide = null;
+
+function setStatus(mode, text){
+  const el = $("status");
+  el.classList.remove("ready", "running");
+  if (mode) el.classList.add(mode);
+  $("status-text").textContent = text;
+}
+
+async function bootPyodide(){
+  try{
+    pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/" });
+    pyodide.runPython(`
+import builtins, js
+def _browser_input(prompt_text=""):
+    result = js.window.prompt(str(prompt_text))
+    if result is None:
+        raise EOFError("input() was cancelled by the user")
+    print(str(prompt_text) + result)
+    return result
+builtins.input = _browser_input
+`);
+    setStatus("ready", "Python 3.11 ready");
+  }catch(err){
+    setStatus("", "Runtime failed to load — check internet & reload");
+  }
+}
+
+async function runSnippet(code){
+  if (!pyodide) return { out:"", err:"Python runtime is still loading — try again in a moment." };
+  let out = "", err = "";
+  pyodide.setStdout({ batched: t => { out += t + "\n"; } });
+  pyodide.setStderr({ batched: t => { err += t + "\n"; } });
+  setStatus("running", "Executing…");
+  try{
+    await pyodide.runPythonAsync(code);
+  }catch(e){
+    err += (e.message || String(e));
+  }finally{
+    setStatus("ready", "Python 3.11 ready");
+  }
+  return { out, err };
+}
+
+/* ============ §3 PRACTICE MODE ======================================
+   Challenge types:
+   • expected: "…"  → output compared line-by-line (normalised)
+   • checkCode:true → no fixed output; passes when error-free AND
+     mustContain source rules are satisfied.                          */
+const TASKS = [
+  { title:"Overview", topic:"Start here", expected:null,
+    brief:`<h3>🧪 Checkpoint Lab — Topics 3 to 6</h3>
+<p>This lab tests what you've learned across four topics: <b>print() &amp; comments</b>, <b>literals</b>, and <b>variables</b>. Work through the tasks in the sidebar in any order — each is checked automatically.</p>
+<div class="callout">📋 <b>Note on scope:</b> this checkpoint covers Topics 3–6. No source notes for "Topic 2" have been provided yet, so it isn't included here.</div>
+<p>When you're done, use the <b>⬇ Download Results PDF</b> button in the header to save a graded report with your name, class, practice results, and quiz score.</p>
+<div class="callout green">💡 Complete the Quiz tab before downloading for a fully graded report — if you download before submitting the quiz, that section will simply show as "not yet submitted".</div>
+<p>Use this panel (Sandbox) to warm up freely — it isn't graded.</p>`,
+    starter:`# Warm-up sandbox — not graded. Try anything from Topics 3-6.
+print("Ready to start the checkpoint!")` },
+
+  { title:"1 · print() sep/end", topic:"Topic 3 · print()",
+    brief:`<h3>Task 1 — keyword arguments</h3>
+<p>Starting from:</p>
+<p><code>print("Data","Structures","in")</code><br><code>print("Python")</code></p>
+<p>Modify these two statements using <code>sep</code> and <code>end</code> to produce the output below.</p>`,
+    expected:`Data###Structures###in...Python`,
+    starter:`print("Data","Structures","in")
+print("Python")`,
+    mustContain:[ { re:/sep\s*=/, msg:"Use the sep= keyword argument." },
+                  { re:/end\s*=/, msg:"Use the end= keyword argument." } ] },
+
+  { title:"2 · Three comment types", topic:"Topic 4 · Comments",
+    brief:`<h3>Task 2 — all three comment styles</h3>
+<p>Write a program that prints the two lines below, and includes all three comment styles: a <b>multi-line</b> comment (<code>'''</code>), a <b>single-line</b> comment on its own line, and an <b>inline</b> comment after a statement.</p>`,
+    expected:`Learning Python
+Is Fun`,
+    starter:`# Add all three comment styles while printing the two lines:
+`,
+    mustContain:[ { re:/'''[\s\S]*?'''|"""[\s\S]*?"""/, msg:"Include a multi-line comment using triple quotes." },
+                  { re:/#/, msg:"Include a # comment." } ] },
+
+  { title:"3 · # inside quotes", topic:"Topic 4 · Comments",
+    brief:`<h3>Task 3 — the # trap</h3>
+<p>Display this exact line — remember, a <code>#</code> inside quotation marks is <b>not</b> a comment.</p>`,
+    expected:`#not a comment`,
+    starter:`# print the line exactly:
+` },
+
+  { title:"4 · Identify literal types", topic:"Topic 5 · Literals",
+    brief:`<h3>Task 4 — type() of four literals</h3>
+<p>Using <code>type()</code>, print the type of each of these four values, one per line, in this order: <code>10</code>, <code>10.5</code>, <code>"10"</code>, <code>True</code>.</p>`,
+    expected:`<class 'int'>
+<class 'float'>
+<class 'str'>
+<class 'bool'>`,
+    starter:`# print type(10), type(10.5), type("10"), type(True):
+`,
+    mustContain:[ { re:/type\s*\(/, msg:"Use the type() function." } ] },
+
+  { title:"5 · Number systems", topic:"Topic 5 · Literals",
+    brief:`<h3>Task 5 — decimal to other bases</h3>
+<p>Given <code>num = 100</code>, print its <b>binary</b>, <b>octal</b>, and <b>hexadecimal</b> representations, one per line, in that order.</p>`,
+    expected:`0b1100100
+0o144
+0x64`,
+    starter:`num = 100
+# print bin(num), oct(num), hex(num):
+`,
+    mustContain:[ { re:/bin\s*\(/, msg:"Use the bin() function." },
+                  { re:/oct\s*\(/, msg:"Use the oct() function." },
+                  { re:/hex\s*\(/, msg:"Use the hex() function." } ] },
+
+  { title:"6 · Quotes inside a string", topic:"Topic 5 · Literals",
+    brief:`<h3>Task 6 — nested quotes</h3>
+<p>Display this exact message, which has double quotes inside it. Use either the <code>\\"</code> escape, or open the string with single quotes.</p>`,
+    expected:`She said, "Python is powerful."`,
+    starter:`# print the line exactly, handling the embedded quotes:
+` },
+
+  { title:"7 · Variables, not literals", topic:"Topic 6 · Variables",
+    brief:`<h3>Task 7 — use variables in every print</h3>
+<p>Assign <code>my_city = "Singapore"</code> and <code>my_age = 25</code>. Print the two lines below using the <b>variables</b> — do not retype "Singapore" or 25 inside the print statements.</p>`,
+    expected:`I live in Singapore
+I am 25 years old`,
+    starter:`my_city = "Singapore"
+my_age = 25
+# print the two lines using the variables:
+`,
+    mustContain:[ { re:/print\s*\([^)]*my_city/, msg:"Use my_city inside a print()." },
+                  { re:/print\s*\([^)]*my_age/, msg:"Use my_age inside a print()." } ] },
+
+  { title:"8 · Getting user input ★", topic:"Topic 6 · Variables", expected:null, checkCode:true,
+    brief:`<h3>Task 8 — input() into a variable</h3>
+<p>Ask the user for their favourite colour using <code>input()</code>, assign it to a variable, then print <code>"Your favourite colour is "</code> followed by the variable.</p>`,
+    starter:`# ask for the user's favourite colour and print a sentence with it:
+`,
+    mustContain:[ { re:/input\s*\(/, msg:"Use input() to ask the user." },
+                  { re:/print\s*\(/, msg:"Print a sentence using the variable." } ] },
+
+  { title:"9 · Combined challenge ★", topic:"Comprehensive", expected:null, checkCode:true,
+    brief:`<h3>Task 9 — put it all together</h3>
+<p>This final task combines every skill from Topics 3–6:</p>
+<ul style="font-size:.85rem;line-height:1.6;margin-left:18px;">
+<li>Ask the user for their <b>name</b> with <code>input()</code>.</li>
+<li>Ask for their <b>birth year</b> with <code>input()</code>, converted to an <b>integer</b> using <code>int()</code>.</li>
+<li>Calculate their approximate age assuming the current year is <b>2026</b> (<code>2026 - birth_year</code>).</li>
+<li>Print a sentence using the <b>variables</b> (not retyped values), with a short <b>comment</b> above the calculation explaining what it does.</li>
+</ul>`,
+    starter:`# Task 9: combine input(), int(), variables, arithmetic, and a comment
+name = input("Enter your name: ")
+birth_year = int(input("Enter your birth year: "))
+# your comment + calculation here
+
+`,
+    mustContain:[ { re:/input\s*\(/g, msg:"Use input() twice — for name and birth year." },
+                  { re:/int\s*\(/, msg:"Convert the birth year with int()." },
+                  { re:/2026\s*-\s*birth_year/, msg:"Calculate age as 2026 - birth_year." },
+                  { re:/#/, msg:"Include a comment explaining the calculation." },
+                  { re:/print\s*\([^)]*name/, msg:"Use the name variable inside a print()." } ] }
+];
+
+let activeTask = 0;
+const taskState = TASKS.map(t => ({ code:t.starter, done:false, attempted:false }));
+
+const taskEditor = CodeMirror.fromTextArea($("task-code"), {
+  mode:"python", lineNumbers:true, indentUnit:4, smartIndent:true,
+  matchBrackets:true, viewportMargin:Infinity
+});
+
+function updateProgress(){
+  const gradable = TASKS.filter(t => t.expected !== null || t.checkCode);
+  const done = TASKS.reduce((n, t, i) => n + (taskState[i].done ? 1 : 0), 0);
+  const pct = gradable.length ? Math.round(done / gradable.length * 100) : 0;
+  $("practice-progress-bar").style.width = pct + "%";
+  $("practice-progress-label").textContent = `${done} / ${gradable.length} completed`;
+}
+
+function renderTaskNav(){
+  const list = $("task-nav-list");
+  list.innerHTML = "";
+  let lastTopic = "";
+  TASKS.forEach((t, i) => {
+    if (t.topic !== lastTopic){
+      lastTopic = t.topic;
+      const h = document.createElement("div");
+      h.className = "nav-topic"; h.textContent = t.topic;
+      list.appendChild(h);
+    }
+    const item = document.createElement("div");
+    item.className = "task-item" + (i === activeTask ? " active" : "") + (taskState[i].done ? " done" : "");
+    item.innerHTML = `<span class="tick">✔</span><span>${t.title}</span>`;
+    item.addEventListener("click", () => selectTask(i));
+    list.appendChild(item);
+  });
+  updateProgress();
+}
+
+function selectTask(i){
+  taskState[activeTask].code = taskEditor.getValue();
+  activeTask = i;
+  const t = TASKS[i];
+  $("task-brief").innerHTML = t.brief +
+    (t.expected !== null
+      ? `<div style="font-size:.68rem;letter-spacing:.14em;color:var(--text-dim);margin:6px 0 4px;">EXPECTED OUTPUT</div><div class="expected">${esc(t.expected)}</div>`
+      : "");
+  taskEditor.setValue(taskState[i].code);
+  $("task-result").innerHTML = `<span class="placeholder">Run your code, then press “Check My Code” to test it against the expected output.</span>`;
+  renderTaskNav();
+  taskEditor.focus();
+}
+
+function normalise(text){
+  const lines = text.replace(/\r/g, "").split("\n").map(l => l.replace(/\s+$/,""));
+  while (lines.length && lines[lines.length-1] === "") lines.pop();
+  return lines.join("\n");
+}
+
+async function runTask(check){
+  if (!verifySignature()) return lockApp();
+  taskState[activeTask].code = taskEditor.getValue();
+  const t = TASKS[activeTask];
+  const res = $("task-result");
+  const r = await runSnippet(taskEditor.getValue());
+  if (check && (t.expected !== null || t.checkCode)) taskState[activeTask].attempted = true;
+
+  if (!check || (t.expected === null && !t.checkCode)){
+    res.innerHTML =
+      (r.out ? esc(r.out) : "") +
+      (r.err ? `<div class="err-text">${esc(r.err)}</div>` : "") +
+      (!r.out && !r.err ? `<span class="placeholder">(no output)</span>` : "");
+    return;
+  }
+
+  let html = "";
+  if (r.err){
+    html += `<div class="verdict fail">✘ NOT YET — your program has an error</div>\n<div class="err-text">${esc(r.err)}</div>`;
+    res.innerHTML = html; return;
+  }
+
+  const src = taskEditor.getValue();
+  const misses = (t.mustContain || []).filter(rule => !rule.re.test(src)).map(rule => rule.msg);
+
+  if (t.checkCode){
+    if (misses.length === 0){
+      taskState[activeTask].done = true;
+      renderTaskNav();
+      html += `<div class="verdict pass">✔ PASSED — program runs and uses the required structure!</div>\n${esc(r.out)}`;
+    } else {
+      html += `<div class="verdict fail">✘ NOT YET — keep trying</div><div class="hint-text">Hint: ${misses.map(esc).join(" ")}</div>\n${esc(r.out)}`;
+    }
+    res.innerHTML = html; return;
+  }
+
+  const got = normalise(r.out);
+  const want = normalise(t.expected);
+  const outputOK = got === want;
+
+  if (outputOK && misses.length === 0){
+    taskState[activeTask].done = true;
+    renderTaskNav();
+    html += `<div class="verdict pass">✔ PASSED — well done!</div>\n${esc(got)}`;
+  } else {
+    html += `<div class="verdict fail">✘ NOT YET — keep trying</div>`;
+    if (misses.length) html += `<div class="hint-text">Hint: ${misses.map(esc).join(" ")}</div>`;
+    if (!outputOK){
+      html += `<div class="diff-grid">
+        <div class="diff-box"><span class="lbl">EXPECTED</span>${esc(want)}</div>
+        <div class="diff-box bad"><span class="lbl">YOUR OUTPUT</span>${got ? esc(got) : "<i>(no output)</i>"}</div>
+      </div>`;
+    } else {
+      html += `\n${esc(got)}`;
+    }
+  }
+  res.innerHTML = html;
+}
+
+$("btn-task-run").addEventListener("click", () => runTask(false));
+$("btn-task-check").addEventListener("click", () => runTask(true));
+$("btn-task-reset").addEventListener("click", () => {
+  if (!confirm("Reset this task to its starter code?")) return;
+  taskEditor.setValue(TASKS[activeTask].starter);
+  taskState[activeTask].code = TASKS[activeTask].starter;
+});
+
+/* ============ §4 QUIZ MODE ==========================================
+   20 questions grouped by topic (Topic 3, 4, 5, 6). Results captured
+   into quizResults[] during grading, used by the PDF export.         */
+const QUIZ = [
+  // ---- Topic 3 · print() ----
+  { topic:"Topic 3 · print()", q:`Which keyword argument controls what is printed BETWEEN multiple arguments?`,
+    opts:[`end`, `sep`, `join`, `gap`],
+    a:1, ex:`sep (separator) controls what goes between arguments — the default is a single space.` },
+  { topic:"Topic 3 · print()", q:`Which keyword argument controls what is printed at the very END instead of a newline?`,
+    opts:[`sep`, `end`, `final`, `close`],
+    a:1, ex:`end replaces the default newline that print() adds after its output.` },
+  { topic:"Topic 3 · print()", q:`What is the output of <code>print()</code> with no arguments at all?`,
+    opts:[`A syntax error`, `The word "None"`, `An empty line`, `Nothing happens at all`],
+    a:2, ex:`Even with nothing to print, print() still outputs its ending newline — you see a blank line.` },
+  { topic:"Topic 3 · print()", q:`Where must keyword arguments like <code>end=</code> be placed in a print() call?`,
+    opts:[`Before all positional arguments`, `Anywhere`, `After the last positional argument`, `On their own line`],
+    a:2, ex:`Keyword arguments must come after the positional arguments — this is a strict Python rule.` },
+
+  // ---- Topic 4 · Comments ----
+  { topic:"Topic 4 · Comments", q:`Which character starts a single-line comment in Python?`,
+    opts:[`//`, `#`, `--`, `/*`],
+    a:1, ex:`Python uses # for single-line comments.` },
+  { topic:"Topic 4 · Comments", q:`How do you write a multi-line comment in Python?`,
+    opts:[`Wrap it in triple quotes ''' … '''`, `Start every line with //`, `Wrap it in /* … */`, `Use the word comment:`],
+    a:0, ex:`Triple quotes (''' or """) at the start and end mark a multi-line comment.` },
+  { topic:"Topic 4 · Comments", q:`What is the output of <code>print("#this is not a comment")</code>?`,
+    opts:[`Nothing — it's treated as a comment`, `this is not a comment`, `#this is not a comment`, `A syntax error`],
+    a:2, ex:`A # inside quotation marks is part of the string, not a comment — it prints as-is.` },
+  { topic:"Topic 4 · Comments", q:`Do comments change the output of a running program?`,
+    opts:[`Yes, always`, `No — Python ignores them completely`, `Only multi-line comments do`, `Only if placed before print()`],
+    a:1, ex:`Comments exist purely for human readers; Python skips them entirely when running the code.` },
+
+  // ---- Topic 5 · Literals ----
+  { topic:"Topic 5 · Literals", q:`What type is <code>"007"</code>?`,
+    opts:[`Integer`, `Float`, `String`, `Boolean`],
+    a:2, ex:`Anything inside quotation marks is a string, even if it looks like a number.` },
+  { topic:"Topic 5 · Literals", q:`What is the output of <code>print(7 // 2)</code>?`,
+    opts:[`3.5`, `3`, `1`, `4`],
+    a:1, ex:`// is floor division — it keeps only the whole number: 7 divided by 2 is 3 remainder 1, so 7//2 gives 3.` },
+  { topic:"Topic 5 · Literals", q:`What is the output of <code>print(7 % 2)</code>?`,
+    opts:[`3`, `3.5`, `1`, `0`],
+    a:2, ex:`% (modulus) keeps only the remainder: 7 divided by 2 leaves a remainder of 1.` },
+  { topic:"Topic 5 · Literals", q:`Why does Python treat <code>4</code> and <code>4.0</code> differently?`,
+    opts:[`It doesn't — they're identical`, `4 is an integer, 4.0 is a float (the decimal point matters)`, `4.0 is a string`, `4 is a Boolean`],
+    a:1, ex:`The presence of a decimal point makes 4.0 a float, while 4 without one stays an integer.` },
+  { topic:"Topic 5 · Literals", q:`What is the decimal value of <code>0x10</code>?`,
+    opts:[`10`, `16`, `8`, `2`],
+    a:1, ex:`0x10 is hexadecimal: 1×16 + 0 = 16.` },
+  { topic:"Topic 5 · Literals", q:`With <code>a = "3"</code> and <code>b = "4"</code>, what does <code>print(a + b)</code> output?`,
+    opts:[`7`, `34`, `3 + 4`, `An error`],
+    a:1, ex:`Since a and b are strings, + concatenates them: "3" + "4" gives the text "34", not the sum 7.` },
+
+  // ---- Topic 6 · Variables ----
+  { topic:"Topic 6 · Variables", q:`Which of these is a VALID Python variable name?`,
+    opts:[`2names`, `my-age`, `for`, `my_age`],
+    a:3, ex:`Variable names must start with a letter (or underscore), use only letters/digits/underscore, and cannot be a reserved keyword.` },
+  { topic:"Topic 6 · Variables", q:`Are <code>Alice</code> and <code>alice</code> the same variable in Python?`,
+    opts:[`Yes, Python ignores case`, `No — Python is case-sensitive`, `Only inside functions`, `Only if both are strings`],
+    a:1, ex:`Python treats uppercase and lowercase letters as different, so Alice and alice are two separate variables.` },
+  { topic:"Topic 6 · Variables", q:`What type of value does <code>input()</code> always return?`,
+    opts:[`Integer`, `Whatever type the user typed`, `String`, `Float`],
+    a:2, ex:`input() always returns a string — convert it with int() or float() if you need a number.` },
+  { topic:"Topic 6 · Variables", q:`What is the main reason to use variables instead of repeating literal values everywhere?`,
+    opts:[`Variables make code run faster`, `You can store a value once and reuse/update it in many places`, `Variables are required by Python syntax`, `There is no real benefit`],
+    a:1, ex:`Storing a value in a variable means you set it once, and every place that uses the variable stays in sync if it changes.` },
+  { topic:"Topic 6 · Variables", q:`Given <code>my_age = 20</code>, what type is automatically created?`,
+    opts:[`String`, `Integer`, `Float`, `Boolean`],
+    a:1, ex:`A whole number with no quotes and no decimal point is automatically created as an integer.` }
+];
+
+let quizSubmitted = false;
+let quizResults = [];   // filled during grading, used by the PDF export
+let quizScore = 0;
+
+function renderQuiz(){
+  const list = $("quiz-list");
+  list.innerHTML = "";
+  let lastTopic = "";
+  QUIZ.forEach((item, qi) => {
+    if (item.topic !== lastTopic){
+      lastTopic = item.topic;
+      const h = document.createElement("div");
+      h.className = "quiz-topic-head";
+      h.textContent = item.topic;
+      list.appendChild(h);
+    }
+    const box = document.createElement("div");
+    box.className = "quiz-q";
+    box.dataset.q = qi;
+    let inner = `<div class="q-text"><span class="q-num">Q${qi + 1}.</span>${item.q}</div>`;
+    item.opts.forEach((opt, oi) => {
+      inner += `<label><input type="radio" name="q${qi}" value="${oi}"><code>${esc(opt)}</code></label>`;
+    });
+    inner += `<div class="explain">💡 ${item.ex}</div>`;
+    box.innerHTML = inner;
+    list.appendChild(box);
+  });
+  $("quiz-score").style.display = "none";
+  $("btn-quiz-submit").disabled = false;
+  quizSubmitted = false;
+  quizResults = [];
+}
+
+function gradeQuiz(){
+  if (!verifySignature()) return lockApp();
+  let score = 0, answered = 0;
+  const results = [];
+  document.querySelectorAll(".quiz-q").forEach(box => {
+    const qi = +box.dataset.q;
+    const chosen = box.querySelector("input:checked");
+    if (chosen) answered++;
+    box.classList.add("graded");
+    box.querySelectorAll("label").forEach((lab, oi) => {
+      const input = lab.querySelector("input");
+      input.disabled = true;
+      if (oi === QUIZ[qi].a) lab.classList.add("correct");
+      else if (chosen && +chosen.value === oi) lab.classList.add("wrong");
+    });
+    const isCorrect = chosen && +chosen.value === QUIZ[qi].a;
+    if (isCorrect) score++;
+    results.push({
+      topic: QUIZ[qi].topic,
+      question: stripHtml(QUIZ[qi].q),
+      yourAnswer: chosen ? stripHtml(QUIZ[qi].opts[+chosen.value]) : "(not answered)",
+      correctAnswer: stripHtml(QUIZ[qi].opts[QUIZ[qi].a]),
+      isCorrect: !!isCorrect
+    });
+  });
+  if (answered < QUIZ.length &&
+      !confirm(`You have answered ${answered} of ${QUIZ.length} questions. Unanswered questions count as wrong — submit anyway?\n\n(Press Cancel, then Try Again to keep answering.)`)){
+    renderQuiz(); return;
+  }
+  quizResults = results;
+  quizScore = score;
+  quizSubmitted = true;
+  const pct = Math.round(score / QUIZ.length * 100);
+  const scoreEl = $("quiz-score");
+  scoreEl.className = pct >= 80 ? "great" : pct >= 50 ? "ok" : "poor";
+  scoreEl.id = "quiz-score";
+  scoreEl.style.display = "block";
+  scoreEl.textContent =
+    `SCORE: ${score} / ${QUIZ.length} (${pct}%) — ` +
+    (pct >= 80 ? "Excellent! You're ready to move on to Topic 7. 🏆"
+     : pct >= 50 ? "Good effort — review the explanations below, then try again."
+     : "Revisit Topics 3–6 in PY//LEARN, then come back and try again.");
+  $("btn-quiz-submit").disabled = true;
+  scoreEl.scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+$("btn-quiz-submit").addEventListener("click", gradeQuiz);
+$("btn-quiz-retry").addEventListener("click", renderQuiz);
+
+/* ============ MODE SWITCHING ======================================== */
+function switchMode(mode){
+  document.querySelectorAll(".mode-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.mode === mode));
+  document.querySelectorAll(".stage").forEach(s => s.classList.remove("active"));
+  $("stage-" + mode).classList.add("active");
+  if (mode === "practice") taskEditor.refresh();
+}
+document.querySelectorAll(".mode-tab").forEach(tab =>
+  tab.addEventListener("click", () => switchMode(tab.dataset.mode)));
+
+/* ============ §5 PDF EXPORT =========================================
+   Builds a graded results report client-side with jsPDF + AutoTable:
+     • Student name, class, date
+     • Practice task table (topic, task, status)
+     • Practice completion score
+     • Quiz per-question breakdown (topic, question, your answer,
+       correct answer, result) — or a note if not yet submitted
+     • Overall quiz score with a short remark
+     • Footer credit + page numbers                                  */
+function generatePDF(){
+  if (!verifySignature()) return lockApp();
+  taskState[activeTask].code = taskEditor.getValue();
+
+  const anyPracticeAttempted = taskState.slice(1).some(s => s.attempted);
+  if (!anyPracticeAttempted && !quizSubmitted){
+    if (!confirm("You haven't attempted any practice tasks or submitted the quiz yet. Download an (empty) results PDF anyway?")) return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 14;
+
+  /* ---- Header ---- */
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(8, 120, 150);
+  doc.text("ITE College West — School of Electronics & Info-Comm Technology", marginX, 18);
+  doc.setFontSize(12);
+  doc.text("Basic Python Programming — Checkpoint Results (Topics 3–6)", marginX, 26);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(40);
+  doc.text(`Student Name: ${studentName}`, marginX, 36);
+  doc.text(`Class: ${studentClass}`, marginX, 42);
+  doc.text(`Date: ${new Date().toLocaleString()}`, marginX, 48);
+  doc.setDrawColor(34, 211, 238);
+  doc.line(marginX, 52, pageWidth - marginX, 52);
+
+  /* ---- Practice results table ---- */
+  const gradableTasks = TASKS.map((t, i) => ({ t, i })).filter(x => x.t.expected !== null || x.t.checkCode);
+  const passedCount = gradableTasks.filter(x => taskState[x.i].done).length;
+  const practiceRows = gradableTasks.map(x => {
+    const st = taskState[x.i];
+    const status = st.done ? "PASSED" : (st.attempted ? "ATTEMPTED - NOT PASSED" : "NOT ATTEMPTED");
+    return [String(x.i), x.t.topic.replace(/^Topic \d+ · /, ""), x.t.title.replace(/^\d+\s*·\s*/, ""), status];
+  });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(20);
+  doc.text("Practice Task Results", marginX, 60);
+
+  doc.autoTable({
+    startY: 64,
+    head: [["#", "Topic", "Task", "Status"]],
+    body: practiceRows,
+    theme: "grid",
+    styles: { fontSize: 8.5, cellPadding: 2.5 },
+    headStyles: { fillColor: [22, 78, 99], textColor: 255, fontStyle: "bold" },
+    columnStyles: { 0:{cellWidth:8}, 1:{cellWidth:32}, 2:{cellWidth:70}, 3:{cellWidth:44} },
+    didParseCell: function(data){
+      if (data.section === "body" && data.column.index === 3){
+        const v = data.cell.raw;
+        if (v === "PASSED") data.cell.styles.textColor = [22, 163, 74];
+        else if (v === "NOT ATTEMPTED") data.cell.styles.textColor = [150, 150, 150];
+        else data.cell.styles.textColor = [220, 38, 38];
+      }
+    }
+  });
+
+  let y = doc.lastAutoTable.finalY + 8;
+  const practicePct = gradableTasks.length ? Math.round(passedCount / gradableTasks.length * 100) : 0;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.5);
+  doc.setTextColor(20);
+  doc.text(`Practice Score: ${passedCount} / ${gradableTasks.length} tasks passed  (${practicePct}%)`, marginX, y);
+  y += 10;
+
+  /* ---- Quiz results ---- */
+  doc.setFontSize(11);
+  doc.text("Quiz Results", marginX, y);
+  y += 4;
+
+  if (!quizSubmitted){
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(150);
+    doc.text("The quiz was not submitted before this report was generated.", marginX, y + 6);
+    y += 14;
+  } else {
+    const quizRows = quizResults.map((r, i) => [
+      String(i + 1),
+      r.topic.replace(/^Topic \d+ · /, ""),
+      r.question,
+      r.yourAnswer,
+      r.correctAnswer,
+      r.isCorrect ? "Correct" : "Incorrect"
+    ]);
+    doc.autoTable({
+      startY: y + 2,
+      head: [["#", "Topic", "Question", "Your Answer", "Correct Answer", "Result"]],
+      body: quizRows,
+      theme: "grid",
+      styles: { fontSize: 7.5, cellPadding: 2, overflow: "linebreak" },
+      headStyles: { fillColor: [22, 78, 99], textColor: 255, fontStyle: "bold" },
+      columnStyles: {
+        0:{cellWidth:7}, 1:{cellWidth:22}, 2:{cellWidth:62},
+        3:{cellWidth:32}, 4:{cellWidth:32}, 5:{cellWidth:18}
+      },
+      didParseCell: function(data){
+        if (data.section === "body" && data.column.index === 5){
+          data.cell.styles.textColor = data.cell.raw === "Correct" ? [22, 163, 74] : [220, 38, 38];
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+    const qPct = Math.round(quizScore / QUIZ.length * 100);
+    const remark = qPct >= 80 ? "Excellent understanding of Topics 3-6."
+                 : qPct >= 50 ? "Satisfactory — review the weaker topics above."
+                 : "Needs improvement — revisit Topics 3-6 in PY//LEARN.";
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(20);
+    doc.text(`Quiz Score: ${quizScore} / ${QUIZ.length}  (${qPct}%) — ${remark}`, marginX, y);
+    y += 10;
+  }
+
+  /* ---- Overall summary ---- */
+  if (y > 260) { doc.addPage(); y = 20; }
+  doc.setDrawColor(34, 211, 238);
+  doc.line(marginX, y, pageWidth - marginX, y);
+  y += 8;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(20);
+  doc.text("Overall Summary", marginX, y);
+  y += 7;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text(`Practice Tasks: ${passedCount} / ${gradableTasks.length} passed (${practicePct}%)`, marginX, y);
+  y += 6;
+  doc.text(`Quiz: ${quizSubmitted ? quizScore + " / " + QUIZ.length + " (" + Math.round(quizScore/QUIZ.length*100) + "%)" : "Not submitted"}`, marginX, y);
+  y += 6;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8.5);
+  doc.setTextColor(120);
+  doc.text("Note: this checkpoint covers Topics 3-6. No source material for \"Topic 2\" was available when this lab was created.", marginX, y);
+
+  /* ---- Footer on every page ---- */
+  const pageCount = doc.internal.getNumberOfPages();
+  const credit = _sigText();
+  for (let p = 1; p <= pageCount; p++){
+    doc.setPage(p);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(150);
+    doc.text(credit, marginX, 290);
+    doc.text(`Page ${p} of ${pageCount}`, pageWidth - marginX, 290, { align: "right" });
+  }
+
+  const safeName = (studentName || "student").replace(/[^a-z0-9]+/gi, "_");
+  const safeClass = (studentClass || "class").replace(/[^a-z0-9]+/gi, "_");
+  doc.save(`Checkpoint_Topics3-6_${safeName}_${safeClass}.pdf`);
+}
+
+$("btn-download-pdf").addEventListener("click", generatePDF);
+
+/* ============ BOOT ================================================== */
+(function mountCredit(){
+  const credit = _sigText();
+  console.log("%c" + credit, "color:#22d3ee;font-weight:bold;");
+  new MutationObserver(() => { if (!verifySignature()) lockApp(); })
+    .observe(document.body, { childList:true, subtree:true });
+})();
+
+renderTaskNav();
+selectTask(0);
+renderQuiz();
+bootPyodide();
+$("gate-name").focus();
+</script>
+</body>
+</html>
