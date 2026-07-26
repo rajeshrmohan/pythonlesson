@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PY//LEARN — Basic Python: Functions (Topic 12)</title>
+
+<!-- ============================================================
+     CDN libraries — no backend required
+     - CodeMirror 5 : Python editor for the practice challenges
+     - Pyodide      : CPython in WebAssembly, runs code client-side
+     ============================================================ -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   DESIGN TOKENS — matches the PY//LAB / PY//LEARN FUI theme
+   ================================================================ */
+:root{
+  --bg:         #0b0f19;
+  --bg-panel:   rgba(13, 20, 36, .82);
+  --grid-line:  rgba(60, 130, 210, .07);
+  --cyan:       #22d3ee;
+  --cyan-dim:   rgba(34, 211, 238, .35);
+  --cyan-faint: rgba(34, 211, 238, .12);
+  --text:       #dbe7f4;
+  --text-dim:   #7e93ad;
+  --red:        #fb4d5c;
+  --red-dim:    rgba(251, 77, 92, .35);
+  --green:      #34d399;
+  --green-dim:  rgba(52, 211, 153, .35);
+  --amber:      #fbbf24;
+  --font-ui:    'Chakra Petch', sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+  --radius:     6px;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; overflow:hidden; }
+body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -5%, rgba(34,211,238,.06), transparent 70%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:100% 100%, 42px 42px, 42px 42px;
+  color:var(--text);
+  font-family:var(--font-ui);
+}
+
+.app{ display:flex; flex-direction:column; height:100vh; width:100vw; padding:12px; gap:12px; }
+header{
+  flex:0 0 auto; display:flex; align-items:center; gap:12px; padding:8px 16px;
+  background:var(--bg-panel); border:1px solid var(--cyan-dim); border-radius:var(--radius);
+  box-shadow:0 0 18px -6px var(--cyan-dim), inset 0 0 24px -18px var(--cyan);
+  flex-wrap:wrap;
+}
+.brand{ font-weight:700; font-size:1rem; letter-spacing:.2em; color:var(--cyan); text-shadow:0 0 12px var(--cyan-dim); white-space:nowrap; }
+.brand small{ color:var(--text-dim); letter-spacing:.12em; font-weight:500; }
+.credit{ font-size:.58rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim);
+  border-left:1px solid rgba(34,211,238,.25); padding-left:12px; user-select:none; white-space:nowrap; }
+@media (max-width:1100px){ .credit{ display:none; } }
+.status{ display:flex; align-items:center; gap:8px; font-size:.7rem; letter-spacing:.14em;
+  color:var(--text-dim); text-transform:uppercase; white-space:nowrap; }
+.status .dot{ width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 8px var(--amber); animation:pulse 1.2s infinite; }
+.status.ready .dot{ background:var(--green); box-shadow:0 0 8px var(--green); animation:none; }
+.status.running .dot{ background:var(--cyan); box-shadow:0 0 10px var(--cyan); animation:pulse .7s infinite; }
+@keyframes pulse{ 50%{ opacity:.35; } }
+.spacer{ flex:1; }
+
+.mode-tabs{ display:flex; gap:6px; }
+.mode-tab{
+  font-family:var(--font-ui); font-size:.78rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--text-dim); cursor:pointer; background:rgba(34,211,238,.05);
+  border:1px solid rgba(34,211,238,.2); border-radius:var(--radius); padding:8px 18px;
+  transition:all .15s;
+}
+.mode-tab:hover{ color:var(--text); background:var(--cyan-faint); }
+.mode-tab.active{
+  color:#04141a; font-weight:700; background:linear-gradient(180deg,#67e8f9,var(--cyan));
+  border-color:var(--cyan); box-shadow:0 0 16px -2px var(--cyan-dim);
+}
+
+.stage{ flex:1; min-height:0; display:none; gap:12px; }
+.stage.active{ display:flex; }
+
+.panel{
+  position:relative; background:var(--bg-panel); border:1px solid var(--cyan-dim);
+  border-radius:var(--radius); box-shadow:0 0 18px -8px var(--cyan-dim);
+  display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden;
+}
+.panel::before, .panel::after{ content:""; position:absolute; width:14px; height:14px; pointer-events:none; z-index:3; }
+.panel::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
+.panel::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
+.panel-head{
+  display:flex; align-items:center; gap:10px; padding:8px 14px; flex:0 0 auto;
+  font-size:.7rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--cyan);
+  border-bottom:1px solid rgba(34,211,238,.18);
+  background:linear-gradient(90deg, var(--cyan-faint), transparent 60%);
+}
+.panel-body{ flex:1; min-height:0; overflow-y:auto; padding:16px; }
+
+button{
+  font-family:var(--font-ui); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+  cursor:pointer; color:var(--text); background:rgba(34,211,238,.06);
+  border:1px solid var(--cyan-dim); border-radius:var(--radius); padding:7px 14px;
+  transition:box-shadow .15s, background .15s, transform .05s; white-space:nowrap;
+}
+button:hover{ background:var(--cyan-faint); box-shadow:0 0 12px -2px var(--cyan-dim); }
+button:active{ transform:translateY(1px); }
+button:disabled{ opacity:.4; cursor:not-allowed; box-shadow:none; }
+button.primary{
+  color:#04141a; font-weight:700; background:linear-gradient(180deg,#67e8f9,var(--cyan));
+  border-color:var(--cyan); box-shadow:0 0 14px -2px var(--cyan-dim);
+}
+
+/* LEARN */
+.lesson-nav{ flex:0 0 250px; }
+.lesson-nav .panel-body{ padding:10px; }
+.nav-topic{ font-size:.66rem; letter-spacing:.18em; color:var(--text-dim); text-transform:uppercase; margin:12px 6px 6px; }
+.nav-item{
+  padding:8px 10px; margin-bottom:4px; border-radius:5px; cursor:pointer;
+  font-size:.8rem; color:var(--text-dim); border:1px solid transparent; transition:all .15s;
+}
+.nav-item:hover{ color:var(--text); background:var(--cyan-faint); }
+.nav-item.active{ color:var(--cyan); background:var(--cyan-faint); border-color:var(--cyan-dim); text-shadow:0 0 8px var(--cyan-dim); }
+.lesson-main{ flex:1; }
+.lesson-main .panel-body{ padding:20px 26px; }
+
+.lesson h2{ font-size:1.15rem; letter-spacing:.06em; color:var(--cyan); margin-bottom:4px; }
+.lesson .objective{ font-size:.72rem; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; margin-bottom:16px; }
+.lesson p{ font-size:.9rem; line-height:1.7; margin-bottom:12px; max-width:820px; }
+.lesson ul{ margin:0 0 12px 22px; font-size:.9rem; line-height:1.7; max-width:800px; }
+.lesson ol{ margin:0 0 12px 22px; font-size:.9rem; line-height:1.7; max-width:800px; }
+.lesson table{ border-collapse:collapse; margin:0 0 14px; font-size:.85rem; }
+.lesson th, .lesson td{ border:1px solid rgba(34,211,238,.25); padding:6px 14px; text-align:left; }
+.lesson th{ color:var(--cyan); font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; background:var(--cyan-faint); }
+.lesson code{ font-family:var(--font-mono); font-size:.82em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.callout{
+  border-left:3px solid var(--amber); background:rgba(251,191,36,.06);
+  padding:10px 14px; margin:0 0 14px; font-size:.84rem; line-height:1.6; max-width:800px; border-radius:0 5px 5px 0;
+}
+.callout.red{ border-left-color:var(--red); background:rgba(251,77,92,.07); }
+
+/* anatomy diagram for function syntax */
+.anatomy{
+  border:1px solid rgba(34,211,238,.25); border-radius:var(--radius);
+  background:rgba(5,9,18,.55); margin:0 0 18px; max-width:600px; overflow:visible;
+  padding:18px 16px 26px; font-family:var(--font-mono); font-size:.86rem;
+}
+.anatomy .code-line{ position:relative; white-space:pre; line-height:1.6; }
+.anatomy .tag{
+  color:#67e8f9;
+}
+.anatomy .labels{ display:flex; flex-wrap:wrap; gap:14px; margin-top:14px; font-family:var(--font-ui); }
+.anatomy .lab{ font-size:.68rem; color:var(--text-dim); display:flex; align-items:center; gap:5px; }
+.anatomy .lab .dot{ width:8px; height:8px; border-radius:50%; background:var(--cyan); display:inline-block; }
+
+.example{
+  border:1px solid rgba(34,211,238,.25); border-radius:var(--radius);
+  background:rgba(5,9,18,.55); margin:0 0 18px; max-width:820px; overflow:hidden;
+}
+.example .ex-head{
+  display:flex; align-items:center; gap:10px; padding:6px 12px;
+  border-bottom:1px solid rgba(34,211,238,.15);
+  font-size:.64rem; letter-spacing:.16em; text-transform:uppercase; color:var(--text-dim);
+}
+.example .ex-head .predict{ color:var(--amber); border:1px solid rgba(251,191,36,.4); border-radius:3px; padding:1px 6px; }
+.example .ex-head button{ margin-left:auto; padding:4px 10px; font-size:.64rem; }
+.example pre{
+  font-family:var(--font-mono); font-size:.82rem; line-height:1.65;
+  padding:12px 14px; overflow-x:auto; color:var(--text); white-space:pre;
+}
+.example .ex-out{
+  display:none; border-top:1px dashed rgba(34,211,238,.25);
+  font-family:var(--font-mono); font-size:.8rem; line-height:1.6;
+  padding:10px 14px; white-space:pre-wrap; word-break:break-word;
+}
+.example .ex-out .lbl{ color:var(--cyan); font-size:.62rem; letter-spacing:.16em; display:block; margin-bottom:4px; }
+.example .ex-out .err{ color:#ffb3ba; }
+
+/* PRACTICE */
+.task-nav{ flex:0 0 250px; }
+.task-nav .panel-body{ padding:10px; }
+.task-item{ display:flex; align-items:center; gap:8px; }
+.task-item .tick{ color:var(--green); font-size:.8rem; visibility:hidden; }
+.task-item.done .tick{ visibility:visible; text-shadow:0 0 8px var(--green-dim); }
+.practice-main{ flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; }
+.practice-top{ flex:0 0 auto; max-height:34%; }
+.practice-top .panel-body{ padding:14px 18px; }
+.practice-top h3{ font-size:.95rem; color:var(--cyan); margin-bottom:6px; letter-spacing:.05em; }
+.practice-top p{ font-size:.85rem; line-height:1.6; margin-bottom:8px; }
+.practice-top code{ font-family:var(--font-mono); font-size:.8em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.expected{
+  font-family:var(--font-mono); font-size:.8rem; line-height:1.55; white-space:pre;
+  border:1px dashed var(--cyan-dim); border-radius:5px; padding:8px 12px;
+  background:rgba(5,9,18,.5); overflow-x:auto; max-width:640px; max-height:140px; overflow-y:auto;
+}
+.practice-editor{ flex:1.4; min-height:140px; }
+.practice-editor .panel-body{ padding:0; overflow:hidden; display:flex; }
+.practice-editor .panel-head .btns{ margin-left:auto; display:flex; gap:6px; }
+.CodeMirror{
+  height:100%; flex:1; background:rgba(5,9,18,.6); color:var(--text);
+  font-family:var(--font-mono); font-size:.85rem; line-height:1.6;
+}
+.CodeMirror-gutters{ background:rgba(5,9,18,.85); border-right:1px solid rgba(34,211,238,.18); }
+.CodeMirror-linenumber{ color:#3c4f66; }
+.CodeMirror-cursor{ border-left:2px solid var(--cyan); }
+.CodeMirror-selected{ background:rgba(34,211,238,.15) !important; }
+.cm-s-default .cm-keyword{ color:#7dd3fc; } .cm-s-default .cm-builtin{ color:#67e8f9; }
+.cm-s-default .cm-string{ color:#86efac; } .cm-s-default .cm-number{ color:#fbbf24; }
+.cm-s-default .cm-comment{ color:#5b7089; font-style:italic; } .cm-s-default .cm-operator{ color:#c4b5fd; }
+
+.practice-result{ flex:1; min-height:110px; }
+.practice-result .panel-body{ font-family:var(--font-mono); font-size:.8rem; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.practice-result .placeholder{ color:var(--text-dim); font-style:italic; }
+.verdict{ font-family:var(--font-ui); font-weight:700; letter-spacing:.1em; padding:6px 10px; border-radius:5px; display:inline-block; margin-bottom:10px; }
+.verdict.pass{ color:var(--green); border:1px solid var(--green-dim); background:rgba(52,211,153,.08); text-shadow:0 0 10px var(--green-dim); }
+.verdict.fail{ color:var(--red); border:1px solid var(--red-dim); background:rgba(251,77,92,.07); }
+.diff-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:760px; margin-top:6px; }
+.diff-box{ border:1px solid rgba(34,211,238,.2); border-radius:5px; padding:8px 10px; background:rgba(5,9,18,.5); white-space:pre; overflow-x:auto; max-height:220px; overflow-y:auto; }
+.diff-box.bad{ border-color:var(--red-dim); }
+.diff-box .lbl{ font-size:.6rem; letter-spacing:.14em; color:var(--text-dim); display:block; margin-bottom:4px; }
+.err-text{ color:#ffb3ba; }
+.hint-text{ color:var(--amber); }
+
+/* QUIZ */
+#stage-quiz .panel{ flex:1; }
+#stage-quiz .panel-body{ padding:20px 26px; }
+.quiz-q{ border:1px solid rgba(34,211,238,.2); border-radius:var(--radius); background:rgba(5,9,18,.45); padding:14px 18px; margin-bottom:14px; max-width:860px; }
+.quiz-q .q-text{ font-size:.9rem; line-height:1.6; margin-bottom:10px; }
+.quiz-q .q-text code, .quiz-q label code{ font-family:var(--font-mono); font-size:.82em; color:#67e8f9; background:rgba(34,211,238,.08); padding:1px 5px; border-radius:3px; }
+.quiz-q .q-num{ color:var(--cyan); font-weight:700; margin-right:6px; }
+.quiz-q label{
+  display:block; font-size:.85rem; padding:7px 12px; margin-bottom:6px; cursor:pointer;
+  border:1px solid rgba(34,211,238,.15); border-radius:5px; transition:all .12s; line-height:1.5;
+}
+.quiz-q label:hover{ background:var(--cyan-faint); }
+.quiz-q input{ accent-color:var(--cyan); margin-right:9px; }
+.quiz-q.graded label{ cursor:default; }
+.quiz-q label.correct{ border-color:var(--green); background:rgba(52,211,153,.1); box-shadow:0 0 10px -4px var(--green-dim); }
+.quiz-q label.wrong{ border-color:var(--red); background:rgba(251,77,92,.08); }
+.quiz-q .explain{ display:none; font-size:.8rem; color:var(--text-dim); border-top:1px dashed rgba(34,211,238,.2); margin-top:8px; padding-top:8px; line-height:1.6; }
+.quiz-q.graded .explain{ display:block; }
+#quiz-score{
+  display:none; font-size:1rem; font-weight:700; letter-spacing:.1em;
+  border:1px solid var(--cyan-dim); border-radius:var(--radius); padding:12px 18px;
+  margin-bottom:16px; max-width:860px; background:var(--cyan-faint);
+}
+#quiz-score.great{ color:var(--green); border-color:var(--green-dim); background:rgba(52,211,153,.08); }
+#quiz-score.ok{ color:var(--amber); }
+#quiz-score.poor{ color:var(--red); border-color:var(--red-dim); }
+
+::-webkit-scrollbar{ width:9px; height:9px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:rgba(34,211,238,.25); border-radius:5px; }
+::-webkit-scrollbar-thumb:hover{ background:rgba(34,211,238,.45); }
+
+@media (max-width:900px){
+  html,body{ overflow:auto; }
+  .app{ height:auto; }
+  .stage.active{ flex-direction:column; }
+  .lesson-nav, .task-nav{ flex:0 0 auto; }
+  .practice-top{ max-height:none; }
+  .practice-editor{ min-height:260px; }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- ================= HEADER ================= -->
+  <header>
+    <div class="brand">PY//LEARN <small>· TOPIC 12 · FUNCTIONS</small></div>
+    <div class="credit" id="app-credit" aria-label="Application credit"></div>
+    <div class="status" id="status"><span class="dot"></span><span id="status-text">Booting Python runtime…</span></div>
+    <div class="spacer"></div>
+    <nav class="mode-tabs" role="tablist">
+      <button class="mode-tab active" data-mode="learn" role="tab">📖 Learn</button>
+      <button class="mode-tab" data-mode="practice" role="tab">⌨ Practice</button>
+      <button class="mode-tab" data-mode="quiz" role="tab">✔ Quiz</button>
+    </nav>
+  </header>
+
+  <!-- ================= LEARN ================= -->
+  <div class="stage active" id="stage-learn">
+    <aside class="panel lesson-nav">
+      <div class="panel-head">Lessons</div>
+      <div class="panel-body" id="lesson-nav-list"></div>
+    </aside>
+    <main class="panel lesson-main">
+      <div class="panel-head">Lesson Content <span id="lesson-tag" style="margin-left:auto;color:var(--text-dim);letter-spacing:.1em;"></span></div>
+      <div class="panel-body"><div class="lesson" id="lesson-body"></div></div>
+    </main>
+  </div>
+
+  <!-- ================= PRACTICE ================= -->
+  <div class="stage" id="stage-practice">
+    <aside class="panel task-nav">
+      <div class="panel-head">Challenges</div>
+      <div class="panel-body" id="task-nav-list"></div>
+    </aside>
+    <div class="practice-main">
+      <section class="panel practice-top">
+        <div class="panel-head">Task Brief</div>
+        <div class="panel-body" id="task-brief"></div>
+      </section>
+      <section class="panel practice-editor">
+        <div class="panel-head">Your Code
+          <span class="btns">
+            <button id="btn-task-run">▶ Run</button>
+            <button id="btn-task-check" class="primary">✔ Check My Code</button>
+            <button id="btn-task-reset">Reset</button>
+          </span>
+        </div>
+        <div class="panel-body"><textarea id="task-code"></textarea></div>
+      </section>
+      <section class="panel practice-result">
+        <div class="panel-head">Result</div>
+        <div class="panel-body" id="task-result"><span class="placeholder">Run your code, then press “Check My Code” to test it against the expected output.</span></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= QUIZ ================= -->
+  <div class="stage" id="stage-quiz">
+    <main class="panel">
+      <div class="panel-head">Topic 12 Quiz — Functions
+        <span style="margin-left:auto;display:flex;gap:8px;">
+          <button id="btn-quiz-submit" class="primary">Submit Answers</button>
+          <button id="btn-quiz-retry">Try Again</button>
+        </span>
+      </div>
+      <div class="panel-body">
+        <div id="quiz-score"></div>
+        <div id="quiz-list"></div>
+      </div>
+    </main>
+  </div>
+
+</div>
+
+<script>
+/* ====================================================================
+   PY//LEARN — Topic 12 interactive courseware (vanilla JS)
+   §0 Signature   — integrity-protected developer credit
+   §1 Runtime     — Pyodide boot + runSnippet(): stdout/err capture
+   §2 LEARN       — lesson data, nav, runnable example cards
+   §3 PRACTICE    — challenges, CodeMirror, output/code checking
+   §4 QUIZ        — MCQ data, grading, explanations
+   ==================================================================== */
+
+/* ============ §0 APPLICATION SIGNATURE (integrity-protected) ======== */
+const _SIG_F = ["RGV2ZWxvcGVkIGJ5IA==", "UmFqZXNoIFIgTW9oYW4=", "IGZvciBJVEUgQ1c="];
+const _SIG_H = 3332075197;
+function _sigText(){ try{ return _SIG_F.map(f => atob(f)).join(""); }catch(e){ return ""; } }
+function _sigHash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h * 33) + s.charCodeAt(i)) >>> 0; return h; }
+function verifySignature(){ return _sigHash(_sigText()) === _SIG_H; }
+function lockApp(){
+  document.body.innerHTML =
+    '<div style="height:100vh;display:flex;align-items:center;justify-content:center;font-family:monospace;color:#fb4d5c;background:#0b0f19;text-align:center;padding:20px;">' +
+    '⛔ INTEGRITY CHECK FAILED<br><br>The application signature has been modified.<br>Restore the original file to continue.</div>';
+  throw new Error("signature integrity failure");
+}
+
+const $ = id => document.getElementById(id);
+
+/* ============ §1 PYTHON RUNTIME ===================================== */
+let pyodide = null;
+
+function setStatus(mode, text){
+  const el = $("status");
+  el.classList.remove("ready", "running");
+  if (mode) el.classList.add(mode);
+  $("status-text").textContent = text;
+}
+
+async function bootPyodide(){
+  try{
+    pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/" });
+    pyodide.runPython(`
+import builtins, js
+def _browser_input(prompt_text=""):
+    result = js.window.prompt(str(prompt_text))
+    if result is None:
+        raise EOFError("input() was cancelled by the user")
+    print(str(prompt_text) + result)
+    return result
+builtins.input = _browser_input
+`);
+    setStatus("ready", "Python 3.11 ready");
+  }catch(err){
+    setStatus("", "Runtime failed to load — check internet & reload");
+  }
+}
+
+async function runSnippet(code){
+  if (!pyodide) return { out:"", err:"Python runtime is still loading — try again in a moment." };
+  let out = "", err = "";
+  pyodide.setStdout({ batched: t => { out += t + "\n"; } });
+  pyodide.setStderr({ batched: t => { err += t + "\n"; } });
+  setStatus("running", "Executing…");
+  try{
+    await pyodide.runPythonAsync(code);
+  }catch(e){
+    err += (e.message || String(e));
+  }finally{
+    setStatus("ready", "Python 3.11 ready");
+  }
+  return { out, err };
+}
+
+/* ============ §2 LEARN MODE ========================================= */
+
+/* Static labelled-anatomy diagram for the function syntax lesson */
+const FUNC_ANATOMY_HTML = `
+<div class="anatomy">
+  <div class="code-line"><span class="tag">def</span> add(num1, num2):</div>
+  <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="tag">return</span> num1 + num2</div>
+  <div class="labels">
+    <span class="lab"><span class="dot"></span> def — keyword that starts a function definition</span>
+    <span class="lab"><span class="dot"></span> add — the function_name</span>
+    <span class="lab"><span class="dot"></span> (num1, num2) — the function_parameters</span>
+    <span class="lab"><span class="dot"></span> indented lines — the function_body</span>
+    <span class="lab"><span class="dot"></span> return — optional, sends a value back to the caller</span>
+  </div>
+</div>`;
+
+const LESSONS = [
+  { topic:"Topic 12 · Functions", id:"t12-1", title:"12.1 What is a function?",
+    html: `
+<h2>Python Functions</h2>
+<div class="objective">Concept · a reusable, named block of code</div>
+<p>A <b>function</b> is a block of code that contains one or more Python statements, used for performing a <b>specific task</b>. You've already been calling functions since Topic 3 — <code>print()</code>, <code>len()</code>, <code>input()</code> are all functions. In this topic, we learn to write our <b>own</b>.</p>`,
+    examples: [] },
+
+  { topic:"Topic 12 · Functions", id:"t12-2", title:"12.2 Why use functions?",
+    html: `
+<h2>Why use functions in Python?</h2>
+<div class="objective">Concept · three reasons functions matter</div>
+<p>A function is a block of code that performs a specific task. Here's what we gain by using them:</p>
+<ol>
+  <li><b>Code re-usability</b> — imagine a task that needs 10 lines of code, repeated in several places in your program. Writing those 10 lines every single time is tedious, makes your code lengthy and less readable, and increases the chance of human error. Write it <b>once</b> as a function, then just <b>call</b> it wherever needed.</li>
+  <li><b>Improves readability</b> — functions structure your code around named tasks, so anyone reading it can follow the flow and purpose more easily.</li>
+  <li><b>Avoid redundancy</b> — no more repeating the same lines throughout your program; you avoid the redundancy that not using functions would create.</li>
+</ol>`,
+    examples: [] },
+
+  { topic:"Topic 12 · Functions", id:"t12-3", title:"12.3 Syntax of a function",
+    html: `
+<h2>Syntax of functions in Python</h2>
+<div class="objective">Concept · declaring vs calling a function</div>
+<p><b>Function declaration</b> (defining it once):</p>
+<p><code>def function_name(function_parameters):</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>function_body</code> — set of Python statements<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>return</code> — optional return statement</p>
+${FUNC_ANATOMY_HTML}
+<p><b>Calling the function</b> (using it, as many times as you like):</p>
+<p><code># when the function doesn't return anything</code><br><code>function_name(parameters)</code></p>
+<p><code># when the function returns something</code><br><code>variable = function_name(parameters)</code> — store the returned value</p>
+<div class="callout">📌 Defining a function does <b>not</b> run its body — the code only executes when you <b>call</b> the function by name.</div>`,
+    examples: [] },
+
+  { topic:"Topic 12 · Functions", id:"t12-4", title:"12.4 A function example",
+    html: `
+<h2>Python function example</h2>
+<div class="objective">Objective 1 · write and execute programs using user-defined functions</div>
+<p>Here we have a function <code>add()</code> that adds two numbers passed to it as <b>parameters</b>. After the function is declared, we call it <b>twice</b>, storing each result in its own variable:</p>`,
+    examples: [
+      { code:`def add(num1, num2):
+    return num1 + num2
+
+sum1 = add(100, 200)
+sum2 = add(8, 9)
+
+print(sum1)
+print(sum2)` }
+    ]},
+
+  { topic:"Topic 12 · Functions", id:"t12-5", title:"12.5 Default arguments",
+    html: `
+<h2>Default arguments in a function</h2>
+<div class="objective">Objective 2 · pass arguments to functions, with defaults</div>
+<p>Using <b>default arguments</b>, we can avoid errors that arise when a function is called without providing every parameter. We provide a default value for the second parameter — this default is used only when the caller does <b>not</b> supply that argument:</p>
+<p>Predict each of the three results before running:</p>`,
+    examples: [
+      { predict:true, code:`# default argument for second parameter
+def add(num1, num2=1):
+    return num1 + num2
+
+sum1 = add(100, 200)   # both arguments given
+sum2 = add(8)          # used default argument for second param
+sum3 = add(100)        # used default argument for second param
+
+print(sum1)
+print(sum2)
+print(sum3)` }
+    ]},
+
+  { topic:"Topic 12 · Functions", id:"t12-6", title:"12.6 Types of functions",
+    html: `
+<h2>Types of functions</h2>
+<div class="objective">Reference · built-in vs user-defined</div>
+<p>There are two types of functions in Python:</p>
+<ol>
+  <li><b>Built-in functions</b> — predefined in Python; we don't need to declare them before calling. We can freely invoke them whenever needed. Examples: <code>print()</code>, <code>len()</code>, <code>input()</code>, <code>range()</code>.</li>
+  <li><b>User-defined functions</b> — functions <b>we create</b> in our own code. The <code>add()</code> function from the earlier example is a user-defined function.</li>
+</ol>
+<p>The example below calls one of each — see if you can tell which is which:</p>`,
+    examples: [
+      { code:`def greet(name):        # user-defined function
+    return "Hello, " + name
+
+message = greet("Python")   # calling our user-defined function
+print(message)              # calling the built-in function print()
+print(len(message))         # calling the built-in function len()` }
+    ]}
+];
+
+let activeLesson = 0;
+
+function esc(s){ const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function renderLessonNav(){
+  const list = $("lesson-nav-list");
+  list.innerHTML = "";
+  let lastTopic = "";
+  LESSONS.forEach((L, i) => {
+    if (L.topic !== lastTopic){
+      lastTopic = L.topic;
+      const t = document.createElement("div");
+      t.className = "nav-topic"; t.textContent = L.topic;
+      list.appendChild(t);
+    }
+    const item = document.createElement("div");
+    item.className = "nav-item" + (i === activeLesson ? " active" : "");
+    item.textContent = L.title;
+    item.addEventListener("click", () => { activeLesson = i; renderLessonNav(); renderLesson(); });
+    list.appendChild(item);
+  });
+}
+
+function renderLesson(){
+  const L = LESSONS[activeLesson];
+  $("lesson-tag").textContent = L.topic;
+  const body = $("lesson-body");
+  body.innerHTML = L.html;   // trusted static lesson content (includes anatomy diagram)
+
+  L.examples.forEach((ex, n) => {
+    const card = document.createElement("div");
+    card.className = "example";
+
+    const head = document.createElement("div");
+    head.className = "ex-head";
+    head.innerHTML = `<span>Example ${n + 1}</span>` +
+      (ex.predict ? `<span class="predict">🔮 predict the output first!</span>` : "");
+    const runBtn = document.createElement("button");
+    runBtn.textContent = "▶ Run example";
+    head.appendChild(runBtn);
+    const sandboxBtn = document.createElement("button");
+    sandboxBtn.textContent = "✎ Open in sandbox";
+    sandboxBtn.style.marginLeft = "6px";
+    head.appendChild(sandboxBtn);
+    card.appendChild(head);
+
+    const pre = document.createElement("pre");
+    pre.textContent = ex.code;
+    card.appendChild(pre);
+
+    const out = document.createElement("div");
+    out.className = "ex-out";
+    card.appendChild(out);
+
+    runBtn.addEventListener("click", async () => {
+      runBtn.disabled = true;
+      const r = await runSnippet(ex.code);
+      out.style.display = "block";
+      out.innerHTML = `<span class="lbl">CONSOLE OUTPUT</span>` +
+        (r.out ? esc(r.out) : "") +
+        (r.err ? `<span class="err">${esc(r.err)}</span>` : "") +
+        (!r.out && !r.err ? `<i style="color:var(--text-dim)">(no output)</i>` : "");
+      runBtn.disabled = false;
+    });
+    sandboxBtn.addEventListener("click", () => {
+      switchMode("practice");
+      selectTask(0);
+      taskEditor.setValue(ex.code);
+    });
+
+    body.appendChild(card);
+  });
+  $("lesson-body").parentElement.scrollTop = 0;
+}
+
+/* ============ §3 PRACTICE MODE ======================================
+   Challenge types:
+   • expected: "…"  → output compared line-by-line (normalised)
+   • checkCode:true → no fixed output; passes when error-free AND
+     mustContain source rules are satisfied.                          */
+const TASKS = [
+  { title:"Sandbox (free play)", expected:null,
+    brief:`<h3>🧪 Sandbox — try anything</h3>
+<p>No checking here — experiment freely with defining and calling functions, parameters, return values and default arguments. Examples from the Learn tab can be opened here with <b>✎ Open in sandbox</b>.</p>`,
+    starter:`# Sandbox — write anything and press Run
+def add(num1, num2):
+    return num1 + num2
+
+print(add(3, 4))` },
+
+  { title:"1 · Your first function",
+    brief:`<h3>Challenge 1 — define and call</h3>
+<p>Write a function <code>square(n)</code> that returns <code>n</code> multiplied by itself. Call it with <code>5</code> and print the result.</p>`,
+    expected:`25`,
+    starter:`# define square(n), then call square(5) and print the result:
+`,
+    mustContain:[ { re:/def\s+square\s*\(/, msg:"Define a function named square()." },
+                  { re:/return\s/, msg:"Use return to send back the result." },
+                  { re:/square\s*\(\s*5\s*\)/, msg:"Call square(5)." } ] },
+
+  { title:"2 · Multiply function ★",
+    brief:`<h3>Challenge 2 — handout practice 1</h3>
+<p>1(a) Write a function <code>multiply()</code> that multiplies two numbers passed to it as parameters.<br>1(b) Call the function to check the functionality — call <code>multiply(6, 7)</code> and print the result.</p>`,
+    expected:`42`,
+    starter:`# 1(a) define multiply(num1, num2)
+# 1(b) call it with multiply(6, 7) and print the result
+`,
+    mustContain:[ { re:/def\s+multiply\s*\(/, msg:"Define a function named multiply()." },
+                  { re:/return\s/, msg:"Use return to send back the result." },
+                  { re:/multiply\s*\(\s*6\s*,\s*7\s*\)/, msg:"Call multiply(6, 7)." } ] },
+
+  { title:"3 · Wishes function ★",
+    brief:`<h3>Challenge 3 — handout practice 2</h3>
+<p>Write a function <code>wishes()</code> that displays the output below when called (the function itself should use <code>print()</code> — it does not need a return value).</p>`,
+    expected:`My Wishes
+Happy Birthday`,
+    starter:`# define wishes() to print the two lines, then call it:
+`,
+    mustContain:[ { re:/def\s+wishes\s*\(\s*\)\s*:/, msg:"Define a function named wishes() with no parameters." },
+                  { re:/wishes\s*\(\s*\)/g, msg:"Call wishes()." } ] },
+
+  { title:"4 · Default arguments",
+    brief:`<h3>Challenge 4 — practise default parameters</h3>
+<p>Write a function <code>greet(name, greeting="Hello")</code> that returns <code>greeting + ", " + name</code>. Call it three times: <code>greet("Amy", "Hi")</code>, <code>greet("Ben")</code> (using the default), and print both results.</p>`,
+    expected:`Hi, Amy
+Hello, Ben`,
+    starter:`# define greet(name, greeting="Hello"), then call it twice as described:
+`,
+    mustContain:[ { re:/def\s+greet\s*\(\s*name\s*,\s*greeting\s*=/, msg:"Give greeting a default value in the function definition." },
+                  { re:/greet\s*\(\s*["']Ben["']\s*\)/, msg:'Call greet("Ben") using the default greeting.' } ] },
+
+  { title:"5 · Built-in vs user-defined",
+    brief:`<h3>Challenge 5 — tell them apart</h3>
+<p>Write a user-defined function <code>shout(text)</code> that returns <code>text</code> converted to uppercase with an exclamation mark added (hint: strings have a built-in <code>.upper()</code> method). Call it with <code>"hello"</code> and print the result — this uses <b>both</b> a user-defined function and built-in functionality together!</p>`,
+    expected:`HELLO!`,
+    starter:`# define shout(text) using text.upper(), then call shout("hello"):
+`,
+    mustContain:[ { re:/def\s+shout\s*\(/, msg:"Define a function named shout()." },
+                  { re:/\.upper\s*\(\s*\)/, msg:"Use the built-in .upper() string method." } ] }
+];
+
+let activeTask = 0;
+const taskState = TASKS.map(t => ({ code:t.starter, done:false }));
+
+const taskEditor = CodeMirror.fromTextArea($("task-code"), {
+  mode:"python", lineNumbers:true, indentUnit:4, smartIndent:true,
+  matchBrackets:true, viewportMargin:Infinity
+});
+
+function renderTaskNav(){
+  const list = $("task-nav-list");
+  list.innerHTML = "";
+  TASKS.forEach((t, i) => {
+    const item = document.createElement("div");
+    item.className = "nav-item task-item" + (i === activeTask ? " active" : "") + (taskState[i].done ? " done" : "");
+    item.innerHTML = `<span class="tick">✔</span><span>${t.title}</span>`;
+    item.addEventListener("click", () => selectTask(i));
+    list.appendChild(item);
+  });
+}
+
+function selectTask(i){
+  taskState[activeTask].code = taskEditor.getValue();
+  activeTask = i;
+  const t = TASKS[i];
+  $("task-brief").innerHTML = t.brief +
+    (t.expected !== null
+      ? `<div style="font-size:.68rem;letter-spacing:.14em;color:var(--text-dim);margin:6px 0 4px;">EXPECTED OUTPUT</div><div class="expected">${esc(t.expected)}</div>`
+      : "");
+  taskEditor.setValue(taskState[i].code);
+  $("task-result").innerHTML = `<span class="placeholder">Run your code, then press “Check My Code” to test it against the expected output.</span>`;
+  renderTaskNav();
+  taskEditor.focus();
+}
+
+function normalise(text){
+  const lines = text.replace(/\r/g, "").split("\n").map(l => l.replace(/\s+$/,""));
+  while (lines.length && lines[lines.length-1] === "") lines.pop();
+  return lines.join("\n");
+}
+
+async function runTask(check){
+  if (!verifySignature()) return lockApp();
+  taskState[activeTask].code = taskEditor.getValue();
+  const t = TASKS[activeTask];
+  const res = $("task-result");
+  const r = await runSnippet(taskEditor.getValue());
+
+  if (!check || (t.expected === null && !t.checkCode)){
+    res.innerHTML =
+      (r.out ? esc(r.out) : "") +
+      (r.err ? `<div class="err-text">${esc(r.err)}</div>` : "") +
+      (!r.out && !r.err ? `<span class="placeholder">(no output)</span>` : "");
+    return;
+  }
+
+  let html = "";
+  if (r.err){
+    html += `<div class="verdict fail">✘ NOT YET — your program has an error</div>\n<div class="err-text">${esc(r.err)}</div>`;
+    res.innerHTML = html; return;
+  }
+
+  const src = taskEditor.getValue();
+  const misses = (t.mustContain || []).filter(rule => !rule.re.test(src)).map(rule => rule.msg);
+
+  if (t.checkCode){
+    if (misses.length === 0){
+      taskState[activeTask].done = true;
+      renderTaskNav();
+      html += `<div class="verdict pass">✔ PASSED — program runs and uses the required structure!</div>\n${esc(r.out)}`;
+    } else {
+      html += `<div class="verdict fail">✘ NOT YET — keep trying</div><div class="hint-text">Hint: ${misses.map(esc).join(" ")}</div>\n${esc(r.out)}`;
+    }
+    res.innerHTML = html; return;
+  }
+
+  const got = normalise(r.out);
+  const want = normalise(t.expected);
+  const outputOK = got === want;
+
+  if (outputOK && misses.length === 0){
+    taskState[activeTask].done = true;
+    renderTaskNav();
+    html += `<div class="verdict pass">✔ PASSED — well done!</div>\n${esc(got)}`;
+  } else {
+    html += `<div class="verdict fail">✘ NOT YET — keep trying</div>`;
+    if (misses.length) html += `<div class="hint-text">Hint: ${misses.map(esc).join(" ")}</div>`;
+    if (!outputOK){
+      html += `<div class="diff-grid">
+        <div class="diff-box"><span class="lbl">EXPECTED</span>${esc(want)}</div>
+        <div class="diff-box bad"><span class="lbl">YOUR OUTPUT</span>${got ? esc(got) : "<i>(no output)</i>"}</div>
+      </div>`;
+    } else {
+      html += `\n${esc(got)}`;
+    }
+  }
+  res.innerHTML = html;
+}
+
+$("btn-task-run").addEventListener("click", () => runTask(false));
+$("btn-task-check").addEventListener("click", () => runTask(true));
+$("btn-task-reset").addEventListener("click", () => {
+  if (!confirm("Reset this challenge to its starter code?")) return;
+  taskEditor.setValue(TASKS[activeTask].starter);
+  taskState[activeTask].code = TASKS[activeTask].starter;
+});
+
+/* ============ §4 QUIZ MODE ========================================== */
+const QUIZ = [
+  { q:`What keyword is used to define a function in Python?`,
+    opts:[`function`, `def`, `func`, `define`],
+    a:1, ex:`Function definitions start with the def keyword, followed by the function name.` },
+  { q:`Which of these is NOT a benefit of using functions, according to the notes?`,
+    opts:[`Code re-usability`, `Improves readability`, `Avoids redundancy`, `Makes the program run without any code`],
+    a:3, ex:`Functions still need code inside them to do something — the three real benefits are reusability, readability, and avoiding redundancy.` },
+  { q:`In <code>def add(num1, num2):</code>, what are num1 and num2 called?`,
+    opts:[`Return values`, `Function parameters`, `Built-in functions`, `Keywords`],
+    a:1, ex:`num1 and num2 are the function's parameters — placeholders for the values that will be passed in when it's called.` },
+  { q:`What does the return statement do?`,
+    opts:[`Prints a value to the console`, `Sends a value back to the code that called the function`, `Ends the entire program`, `Is required in every function`],
+    a:1, ex:`return sends a value back to the caller, so it can be stored in a variable or used directly. It's optional — some functions just perform an action instead.` },
+  { q:`Given <code>def add(num1, num2): return num1 + num2</code>, what does <code>add(100, 200)</code> evaluate to?`,
+    opts:[`100`, `200`, `300`, `An error`],
+    a:2, ex:`The function adds its two arguments: 100 + 200 = 300.` },
+  { q:`What is a "default argument"?`,
+    opts:[`A value used automatically if the caller doesn't supply that argument`, `The first argument in every function`, `An argument that can never be changed`, `A built-in function`],
+    a:0, ex:`A default argument (e.g. num2=1) supplies a fallback value, used only when the caller omits that argument.` },
+  { q:`Given <code>def add(num1, num2=1): return num1 + num2</code>, what does <code>add(8)</code> return?`,
+    opts:[`8`, `1`, `9`, `An error — not enough arguments`],
+    a:2, ex:`Since num2 isn't supplied, its default value 1 is used: 8 + 1 = 9.` },
+  { q:`Which of these is a BUILT-IN function?`,
+    opts:[`add()`, `multiply()`, `print()`, `wishes()`],
+    a:2, ex:`print() is predefined in Python — we never need to declare it before using it. The others are examples of user-defined functions.` },
+  { q:`What is a "user-defined function"?`,
+    opts:[`A function built into Python`, `A function that a programmer writes in their own code`, `A function that only takes one argument`, `A function with no name`],
+    a:1, ex:`User-defined functions are ones we create ourselves, like add() or multiply() in this topic's examples.` },
+  { q:`Does defining a function (writing the def block) run its code immediately?`,
+    opts:[`Yes, immediately`, `No — the code only runs when the function is called`, `Only if it has a return statement`, `Only if it's the first function in the file`],
+    a:1, ex:`Defining a function just teaches Python what it does. The body only executes when you actually call the function by name.` },
+  { q:`Can the same function be called more than once in a program?`,
+    opts:[`No, only once`, `Yes, as many times as needed`, `Only twice`, `Only if it returns a value`],
+    a:1, ex:`That's the whole point of reusability — write it once, call it wherever needed, as many times as you like.` }
+];
+
+function renderQuiz(){
+  const list = $("quiz-list");
+  list.innerHTML = "";
+  QUIZ.forEach((item, qi) => {
+    const box = document.createElement("div");
+    box.className = "quiz-q";
+    box.dataset.q = qi;
+    let inner = `<div class="q-text"><span class="q-num">Q${qi + 1}.</span>${item.q}</div>`;
+    item.opts.forEach((opt, oi) => {
+      inner += `<label><input type="radio" name="q${qi}" value="${oi}"><code>${esc(opt)}</code></label>`;
+    });
+    inner += `<div class="explain">💡 ${item.ex}</div>`;
+    box.innerHTML = inner;
+    list.appendChild(box);
+  });
+  $("quiz-score").style.display = "none";
+  $("btn-quiz-submit").disabled = false;
+}
+
+function gradeQuiz(){
+  if (!verifySignature()) return lockApp();
+  let score = 0, answered = 0;
+  document.querySelectorAll(".quiz-q").forEach(box => {
+    const qi = +box.dataset.q;
+    const chosen = box.querySelector("input:checked");
+    if (chosen) answered++;
+    box.classList.add("graded");
+    box.querySelectorAll("label").forEach((lab, oi) => {
+      const input = lab.querySelector("input");
+      input.disabled = true;
+      if (oi === QUIZ[qi].a) lab.classList.add("correct");
+      else if (chosen && +chosen.value === oi) lab.classList.add("wrong");
+    });
+    if (chosen && +chosen.value === QUIZ[qi].a) score++;
+  });
+  if (answered < QUIZ.length &&
+      !confirm(`You have answered ${answered} of ${QUIZ.length} questions. Unanswered questions count as wrong — submit anyway?\n\n(Press Cancel, then Try Again to keep answering.)`)){
+    renderQuiz(); return;
+  }
+  const pct = Math.round(score / QUIZ.length * 100);
+  const scoreEl = $("quiz-score");
+  scoreEl.className = pct >= 80 ? "great" : pct >= 50 ? "ok" : "poor";
+  scoreEl.id = "quiz-score";
+  scoreEl.style.display = "block";
+  scoreEl.textContent =
+    `SCORE: ${score} / ${QUIZ.length} (${pct}%) — ` +
+    (pct >= 80 ? "Excellent! You have mastered Python functions. 🏆"
+     : pct >= 50 ? "Good effort — review the explanations below, then try again."
+     : "Keep practising — revisit the Learn tab, then try again.");
+  $("btn-quiz-submit").disabled = true;
+  scoreEl.scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+$("btn-quiz-submit").addEventListener("click", gradeQuiz);
+$("btn-quiz-retry").addEventListener("click", renderQuiz);
+
+/* ============ MODE SWITCHING ======================================== */
+function switchMode(mode){
+  document.querySelectorAll(".mode-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.mode === mode));
+  document.querySelectorAll(".stage").forEach(s => s.classList.remove("active"));
+  $("stage-" + mode).classList.add("active");
+  if (mode === "practice") taskEditor.refresh();
+}
+document.querySelectorAll(".mode-tab").forEach(tab =>
+  tab.addEventListener("click", () => switchMode(tab.dataset.mode)));
+
+/* ============ BOOT ================================================== */
+if (!verifySignature()) lockApp();
+(function mountCredit(){
+  const credit = _sigText();
+  const el = $("app-credit");
+  el.textContent = credit; el.title = credit;
+  console.log("%c" + credit, "color:#22d3ee;font-weight:bold;");
+  new MutationObserver(() => {
+    if (!verifySignature()) return lockApp();
+    if (el.textContent !== credit) el.textContent = credit;
+  }).observe(el, { childList:true, characterData:true, subtree:true });
+})();
+
+renderLessonNav();
+renderLesson();
+renderTaskNav();
+selectTask(0);
+renderQuiz();
+bootPyodide();
+</script>
+</body>
+</html>
