@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Python Programming — Online Learning Resources</title>
+    <style>
+        :root {
+            --primary-color: #3776ab; /* Python Blue */
+            --secondary-color: #ffd43b; /* Python Yellow */
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 2.5rem 1rem;
+            border-bottom: 5px solid var(--secondary-color);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .resource-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .resource-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+
+        .resource-card h2 {
+            margin-top: 0;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .resource-card h2 a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .resource-card h2 a:hover {
+            text-decoration: underline;
+        }
+
+        .resource-card p {
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: #2b5d87;
+        }
+
+        /* Specific border colors for different types of resources */
+        .card-tool { border-left-color: #9b59b6; }
+        .card-lab { border-left-color: #2ecc71; }
+        .card-lesson { border-left-color: #3498db; }
+        .card-test { border-left-color: #e74c3c; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Basic Python Programming</h1>
+        <p>Online Learning Resources</p>
+    </header>
+
+    <div class="container">
+
+        <!-- Tools & Labs -->
+        <div class="resource-card card-tool">
+            <h2><a href="https://rajeshrmohan.github.io/onboarding/PythonC.html" target="_blank">🖥️ PY//LAB — Python Coding Environment</a></h2>
+            <p>A browser-based Python editor with a built-in flowchart planner, live console output, and error log. Use this anytime you want to plan a program's logic before coding, or just practise writing and running Python freely.</p>
+            <a href="https://rajeshrmohan.github.io/onboarding/PythonC.html" class="btn" target="_blank">Open Environment</a>
+        </div>
+
+        <div class="resource-card card-lab">
+            <h2><a href="https://rajeshrmohan.github.io/onboarding/Lesson2_Labs.html" target="_blank">🧪 Lesson 2 — Hands-On Labs</a></h2>
+            <p>Guided lab exercises to reinforce what was covered in Lesson 2. Work through each task at your own pace and check your output as you go.</p>
+            <a href="https://rajeshrmohan.github.io/onboarding/Lesson2_Labs.html" class="btn" target="_blank">Start Lab</a>
+        </div>
+
+        <!-- Lessons -->
+        <div class="resource-card card-lesson">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topics3-4.html" target="_blank">📖 Topics 3–4 — print() and Comments</a></h2>
+            <p>Learn how to display output with <code>print()</code>, use <code>sep</code> and <code>end</code> keyword arguments, and write single- and multi-line comments. Includes runnable examples, guided practice, and a short quiz.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topics3-4.html" class="btn" target="_blank">Go to Lesson</a>
+        </div>
+
+        <div class="resource-card card-lesson">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topics5-6.html" target="_blank">📖 Topics 5–6 — Literals and Variables</a></h2>
+            <p>Explore Python's data types (integers, floats, strings, Booleans, number systems) and learn how to name, assign, and use variables — including getting input from the user. Includes runnable examples, guided practice, and a short quiz.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topics5-6.html" class="btn" target="_blank">Go to Lesson</a>
+        </div>
+
+        <div class="resource-card card-lesson">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topics7-8.html" target="_blank">📖 Topics 7–8 — Operators and Decision Making</a></h2>
+            <p>Cover arithmetic, comparison, logical, assignment, identity, and membership operators, then move into <code>if</code>, <code>if..else</code>, and <code>if..elif..else</code> statements for controlling program flow. Includes runnable examples, guided practice, and a short quiz.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topics7-8.html" class="btn" target="_blank">Go to Lesson</a>
+        </div>
+
+        <div class="resource-card card-lesson">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topic9.html" target="_blank">📖 Topic 9 — Data Types: Lists</a></h2>
+            <p>Learn how to create, index, slice, and modify Python lists — including adding, updating, and deleting items. Includes runnable examples, guided practice, and a short quiz.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topic9.html" class="btn" target="_blank">Go to Lesson</a>
+        </div>
+
+        <div class="resource-card card-lesson">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topic10.html" target="_blank">📖 Topic 10 — Iterative Statements: For Loop</a></h2>
+            <p>Understand how the <code>for</code> loop works with lists, strings, and the <code>range()</code> function, including nested loops and the <code>for..else</code> structure. Includes runnable examples, guided practice, and a short quiz.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topic10.html" class="btn" target="_blank">Go to Lesson</a>
+        </div>
+
+        <div class="resource-card card-lesson">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topic11.html" target="_blank">📖 Topic 11 — Iterative Statements: While Loop</a></h2>
+            <p>Learn how the <code>while</code> loop repeats code until a condition becomes false, including nested loops, the <code>while..else</code> structure, and how to recognise and avoid infinite loops. Includes runnable examples, guided practice, and a short quiz.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topic11.html" class="btn" target="_blank">Go to Lesson</a>
+        </div>
+
+        <div class="resource-card card-lesson">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topic12.html" target="_blank">📖 Topic 12 — Functions</a></h2>
+            <p>Learn how to write and call your own Python functions, pass arguments and use default values, and understand the difference between built-in and user-defined functions. Includes runnable examples, guided practice, and a short quiz.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_learn_topic12.html" class="btn" target="_blank">Go to Lesson</a>
+        </div>
+
+        <!-- Assessments -->
+        <div class="resource-card card-test">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_test_topics2-6.html" target="_blank">📝 Checkpoint Test — Topics 2–6</a></h2>
+            <p>A graded assessment covering <code>print()</code> & comments, literals, and variables. Enter your name and class to begin, then complete the practice challenges and quiz. Download your fully marked results as a PDF at the end.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_test_topics2-6.html" class="btn" target="_blank">Start Assessment</a>
+        </div>
+
+        <div class="resource-card card-test">
+            <h2><a href="https://rajeshrmohan.github.io/pythonlesson/py_test_topics7-12.html" target="_blank">📝 Checkpoint Test — Topics 7–12</a></h2>
+            <p>A graded assessment covering operators, decision making, lists, the for loop, the while loop, and functions. Enter your name and class to begin, then complete the practice challenges and quiz. Download your fully marked results as a PDF at the end.</p>
+            <a href="https://rajeshrmohan.github.io/pythonlesson/py_test_topics7-12.html" class="btn" target="_blank">Start Assessment</a>
+        </div>
+
+    </div>
+
+</body>
+</html>
